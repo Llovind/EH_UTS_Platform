@@ -1,6 +1,123 @@
 (() => {
   'use strict';
 
+  const toastRegion = document.createElement('div');
+  toastRegion.className = 'toast-region';
+  toastRegion.setAttribute('aria-live', 'polite');
+  toastRegion.setAttribute('aria-atomic', 'true');
+  document.body.appendChild(toastRegion);
+
+  function showToast(title, message, kind = 'error') {
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-' + kind;
+    toast.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+    const content = document.createElement('div');
+    content.className = 'toast-content';
+    const heading = document.createElement('strong');
+    heading.textContent = title || (kind === 'error' ? 'Request failed' : 'Request complete');
+    content.appendChild(heading);
+    if (message) {
+      const detail = document.createElement('span');
+      detail.textContent = message;
+      content.appendChild(detail);
+    }
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'toast-close';
+    close.setAttribute('aria-label', 'Dismiss notification');
+    close.textContent = '×';
+    close.addEventListener('click', () => toast.remove());
+    toast.append(content, close);
+    toastRegion.appendChild(toast);
+    window.setTimeout(() => toast.remove(), 7000);
+  }
+
+  function feedbackFromResponse(response, text, fallbackTitle) {
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('html')) {
+      return { title: fallbackTitle, message: text.trim() || 'The request could not be completed.' };
+    }
+    const parsed = new DOMParser().parseFromString(text, 'text/html');
+    const source = parsed.querySelector('.flash.bad, .notice.bad, .flash.good, .notice.good, .flash.info, .notice.info');
+    if (!source) return { title: fallbackTitle, message: 'The request could not be completed.' };
+    const heading = source.querySelector('h1, strong');
+    const items = [...source.querySelectorAll('li')].map((item) => item.textContent.trim()).filter(Boolean);
+    const paragraph = source.querySelector('p');
+    const message = paragraph?.textContent.trim() || items.join(' ') || source.textContent.trim();
+    return { title: heading?.textContent.trim() || fallbackTitle, message, kind: source.classList.contains('good') ? 'success' : 'error' };
+  }
+
+  function clearSensitiveFields(form) {
+    form.querySelectorAll('input[type="password"], input[name="activation_code"], input[name="flag"], input[name="confirmation"]').forEach((input) => {
+      input.value = '';
+    });
+  }
+
+  function replaceDocument(html) {
+    document.open();
+    document.write(html);
+    document.close();
+  }
+
+  function shouldReplaceDocument(action) {
+    return /\/api\/setup\/(attacker|target)\/(token|regenerate)$/.test(action) || /\/build\/challenge\/check$/.test(action);
+  }
+
+  function shouldReloadLab(action) {
+    return /\/lab-space\/\d+\/flag$/.test(action);
+  }
+
+  function setupFormHandling() {
+    document.querySelectorAll('form').forEach((form) => {
+      if ((form.method || 'get').toLowerCase() !== 'post') return;
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (form.dataset.submitting === 'true') return;
+        form.dataset.submitting = 'true';
+        form.classList.add('is-submitting');
+        const submitter = event.submitter;
+        const action = submitter?.formAction || form.action || window.location.href;
+        const buttons = [...form.querySelectorAll('button[type="submit"]')];
+        buttons.forEach((button) => { button.disabled = true; });
+        try {
+          const response = await fetch(action, {
+            method: 'POST',
+            credentials: 'same-origin',
+            redirect: 'follow',
+            headers: { Accept: 'text/html' },
+            body: new URLSearchParams(new FormData(form)),
+          });
+          const text = await response.text();
+          if (response.redirected) {
+            window.location.assign(response.url);
+            return;
+          }
+          const feedback = feedbackFromResponse(response, text, response.status >= 500 ? 'Service unavailable' : 'Request failed');
+          if (!response.ok) {
+            clearSensitiveFields(form);
+            showToast(feedback.title, feedback.message, 'error');
+          } else if (shouldReplaceDocument(action)) {
+            replaceDocument(text);
+            return;
+          } else if (shouldReloadLab(action)) {
+            showToast(feedback.title, feedback.message, feedback.kind || 'success');
+            window.setTimeout(() => window.location.reload(), 350);
+            return;
+          } else if (feedback.message) {
+            showToast(feedback.title, feedback.message, feedback.kind || 'success');
+          }
+        } catch {
+          clearSensitiveFields(form);
+          showToast('Connection failed', 'The portal could not complete the request. Check your connection and try again.', 'error');
+        } finally {
+          form.dataset.submitting = 'false';
+          form.classList.remove('is-submitting');
+          buttons.forEach((button) => { button.disabled = false; });
+        }
+      });
+    });
+  }
+
   document.querySelectorAll('[data-copy]').forEach((button) => {
     button.addEventListener('click', async () => {
       try {
@@ -13,6 +130,8 @@
       }
     });
   });
+
+  setupFormHandling();
 
   const statusNode = document.querySelector('[data-setup-status]');
   if (!statusNode) return;

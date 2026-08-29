@@ -140,6 +140,18 @@ legend { padding: 0 .4rem; color: var(--blue); font: 700 .68rem "IBM Plex Mono",
 .command code { color: var(--text); }
 .copy-button { position: absolute; top: .5rem; right: .5rem; padding: .35rem .45rem; border: 1px solid var(--line); background: var(--surface-strong); color: var(--blue); font: .6rem "IBM Plex Mono", Consolas, monospace; }
 .copy-button:hover { border-color: var(--blue); }
+.toast-region { position: fixed; top: 1rem; right: 1rem; z-index: 100; display: grid; gap: .75rem; width: min(24rem, calc(100vw - 2rem)); pointer-events: none; }
+.toast { position: relative; display: flex; align-items: flex-start; gap: 1rem; padding: 1rem 2.8rem 1rem 1.1rem; border: 1px solid var(--line); background: var(--surface-strong); box-shadow: 0 .6rem 1.5rem rgba(0, 0, 0, .22); pointer-events: auto; animation: toast-in .18s ease-out; }
+.toast-error { border-color: var(--red); background: var(--red-soft); }
+.toast-success { border-color: var(--blue); background: var(--blue-soft); }
+.toast-content { display: grid; gap: .25rem; }
+.toast strong { color: var(--text); font: 700 .75rem "IBM Plex Mono", Consolas, monospace; letter-spacing: .06em; text-transform: uppercase; }
+.toast span { color: var(--muted); font-size: .8rem; line-height: 1.45; }
+.toast-close { position: absolute; top: .45rem; right: .65rem; padding: .15rem; border: 0; background: transparent; color: var(--muted); font: 1.2rem/1 "DM Sans", "Segoe UI", Arial, sans-serif; }
+.toast-close:hover { color: var(--text); }
+form.is-submitting { opacity: .7; }
+button:disabled, .button:disabled { cursor: wait; opacity: .65; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(-.35rem); } to { opacity: 1; transform: translateY(0); } }
 .callout, .notice, .flash, .empty { padding: 1rem; border: 1px solid var(--line); background: var(--surface); }
 .callout { margin-top: 1rem; }
 .callout p, .notice p, .flash p { margin: .35rem 0 0; color: var(--muted); }
@@ -234,6 +246,7 @@ summary { cursor: pointer; color: var(--blue); font-family: "IBM Plex Mono", Con
 
 @media (max-width: 520px) {
   body, button, input, select, textarea { font-size: 16px; }
+  .toast-region { top: .75rem; right: .75rem; width: calc(100vw - 1.5rem); }
   .site-header { padding: .85rem 1rem; }
   .brand { gap: .55rem; font-size: .62rem; letter-spacing: .08em; }
   .brand img { width: 6.6rem; }
