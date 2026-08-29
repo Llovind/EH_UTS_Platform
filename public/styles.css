@@ -30,6 +30,9 @@ code { color: var(--blue); }
 .site-header nav a:hover, .nav-form button:hover { color: var(--text); }
 .nav-form { margin: 0; }
 .nav-form button { padding: 0; border: 0; background: transparent; color: var(--muted); font: inherit; text-transform: uppercase; }
+.account-chip { display: inline-flex; align-items: baseline; gap: .45rem; padding-left: .9rem; border-left: 1px solid var(--line); white-space: nowrap; }
+.account-chip span { color: var(--muted); font-size: .56rem; letter-spacing: .1em; }
+.account-chip strong { color: var(--blue); font-size: .68rem; }
 .nav-cta { padding: .5rem .75rem; border: 1px solid var(--blue); color: var(--blue); }
 
 .shell { max-width: var(--max); margin: 0 auto; padding: 2.5rem 1.25rem 5rem; }
@@ -170,6 +173,7 @@ summary { cursor: pointer; color: var(--blue); font-family: "IBM Plex Mono", Con
 
 .target-banner { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; margin-bottom: 1rem; padding: .9rem 1rem; border: 1px solid var(--blue); background: var(--blue-soft); }
 .target-banner strong { color: var(--text); font: 700 1.2rem "IBM Plex Mono", Consolas, monospace; }
+.target-banner .copy-button { position: static; }
 .lab-detail-stack { display: grid; gap: 1.5rem; }
 .lab-detail-stack .target-banner { margin-bottom: 0; }
 .lab-card { padding: 1.5rem; }

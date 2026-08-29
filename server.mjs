@@ -419,7 +419,7 @@ function renderPage(title, content, req) {
   const nav = user
     ? '<a href="/setup">Lab Config</a><a href="/learn">Learn</a><a href="/build">Build</a><a href="/lab-space">Lab Space</a><a href="/scoreboard">Scoreboard</a>' +
       (user.role === 'admin' ? '<a href="/admin">Admin</a>' : '') +
-      '<form class="nav-form" method="post" action="/logout">' + csrfField(req) + '<button type="submit">Sign out</button></form>'
+      '<span class="account-chip"><span>ACCOUNT</span><strong>' + esc(req.user.caasId) + '</strong></span><form class="nav-form" method="post" action="/logout">' + csrfField(req) + '<button type="submit">Sign out</button></form>'
     : '<a href="/scoreboard">Scoreboard</a><a class="nav-cta" href="/login">Sign in</a>';
   return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="MBC LAS Week 4 portal"><title>' +
     esc(title) + ' · MBC LAS W4</title><link rel="icon" href="/logo.png"><link rel="stylesheet" href="/styles.css?v=20260829-ui"><script src="/app.js?v=20260829-toast-2" defer></script></head><body><header class="site-header"><a class="brand" href="/"><img src="/logo.png" alt="MBC Laboratory"><span>LAS / WEEK 04</span></a><nav>' +
