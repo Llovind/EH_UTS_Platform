@@ -39,11 +39,12 @@ code { color: var(--blue); }
 .hero-compact h1 { margin: .8rem 0 1rem; font-family: "Bricolage Grotesque", "Arial Narrow", Impact, sans-serif; font-size: clamp(3rem, 8vw, 6.8rem); line-height: .88; letter-spacing: -.06em; text-transform: uppercase; }
 .hero-compact h1 em { color: var(--blue); font-style: normal; }
 .hero-compact p { max-width: 620px; margin: 0; color: var(--muted); }
-.hero-actions, .form-actions, .inline-actions, .admin-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .65rem; }
+.hero-actions, .form-actions, .inline-actions, .admin-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .9rem; }
 .form-actions { justify-content: space-between; gap: 1rem 1.25rem; margin-top: .25rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }
 .action-group { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
 .action-group-navigation { margin-left: auto; }
 .hero-actions { margin-top: 1.5rem; }
+.inline-actions { margin-top: 1.25rem; }
 .hero-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 780px; margin-top: 3rem; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .hero-meta span { display: flex; flex-direction: column; gap: .15rem; padding: .9rem 1rem .9rem 0; border-right: 1px solid var(--line); }
 .hero-meta span + span { padding-left: 1rem; }
@@ -63,7 +64,7 @@ code { color: var(--blue); }
 .page-head { display: flex; align-items: end; justify-content: space-between; gap: 1.5rem; margin: 1rem 0 2rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--line); }
 .page-head h1 { margin: .5rem 0 .35rem; font-family: "Bricolage Grotesque", "Arial Narrow", Impact, sans-serif; font-size: clamp(2.5rem, 6vw, 5.3rem); line-height: .9; letter-spacing: -.05em; text-transform: uppercase; }
 .page-head p { max-width: 680px; margin: 0; }
-.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin: 1.5rem 0 2.5rem; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0 2.5rem; }
 .stat { display: flex; flex-direction: column; gap: .25rem; min-height: 6.5rem; padding: 1rem; border: 1px solid var(--line); background: var(--surface); }
 .stat span { color: var(--muted); font: .63rem "IBM Plex Mono", Consolas, monospace; letter-spacing: .1em; text-transform: uppercase; }
 .stat strong { color: var(--blue); font: 700 1.25rem "IBM Plex Mono", Consolas, monospace; }
@@ -103,9 +104,10 @@ code { color: var(--blue); }
 .timeline div { display: flex; justify-content: space-between; gap: 1rem; color: var(--muted); font-size: .8rem; }
 .timeline strong { color: var(--text); font-family: "IBM Plex Mono", Consolas, monospace; }
 
-.module-grid, .challenge-grid, .admin-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.module-grid, .challenge-grid, .admin-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 .module-card, .challenge-card, .admin-card, .card, .form-card, .builder-meta { border: 1px solid var(--line); background: var(--surface); }
 .module-card, .challenge-card, .admin-card { position: relative; padding: 1.1rem; }
+.admin-card { padding: 1.35rem; }
 .module-card:hover, .challenge-card:hover { border-color: var(--blue); }
 .module-card h2, .challenge-card h2, .admin-card h2, .card h2 { margin: .55rem 0; font-family: "Bricolage Grotesque", "Arial Narrow", Impact, sans-serif; line-height: 1; text-transform: uppercase; }
 .module-card p, .challenge-card p, .admin-card p { margin: 0; color: var(--muted); font-size: .82rem; }
@@ -176,7 +178,9 @@ summary { cursor: pointer; color: var(--blue); font-family: "IBM Plex Mono", Con
 .score-note { margin-top: 1rem; padding: .85rem 1rem; border-left: 2px solid var(--blue); color: var(--muted); font-size: .76rem; }
 
 .admin-card { border-left: 2px solid var(--red); }
-.admin-actions { margin-top: 1rem; }
+.admin-card > .button { margin-top: 1.25rem; }
+.admin-card .admin-grid { margin: 1.2rem 0; }
+.admin-actions { margin-top: 1.25rem; }
 .note-form { display: flex; flex: 1 1 20rem; gap: .5rem; }
 .note-form input { min-width: 0; }
 .security-callout { display: flex; gap: .75rem; margin-top: 1.5rem; padding: .9rem 1rem; border: 1px solid var(--red); color: #f0a0a0; font-size: .76rem; }
@@ -193,6 +197,7 @@ summary { cursor: pointer; color: var(--blue); font-family: "IBM Plex Mono", Con
 .audit-row strong { color: var(--text); font-family: "IBM Plex Mono", Consolas, monospace; }
 .audit-row code { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
 .site-footer { display: flex; justify-content: space-between; gap: 1rem; max-width: var(--max); margin: 0 auto; padding: 1.25rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .6rem; letter-spacing: .06em; }
+.shell > a.button { display: inline-flex; margin-top: 1.5rem; }
 
 @media (max-width: 760px) {
   .site-header { align-items: flex-start; flex-direction: column; gap: .8rem; }
@@ -212,6 +217,7 @@ summary { cursor: pointer; color: var(--blue); font-family: "IBM Plex Mono", Con
   .review-actions .note-form input, .review-actions .button { width: 100%; }
   .review-actions-availability .note-form { grid-template-columns: 1fr; }
   .review-back { width: 100%; }
+  .shell > a.button, .admin-card > .button { width: 100%; }
   .form-actions { align-items: stretch; flex-direction: column; }
   .action-group { width: 100%; }
   .action-group-navigation { margin-left: 0; }
