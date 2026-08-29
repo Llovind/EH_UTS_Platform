@@ -6,8 +6,9 @@ portal.example.org {
     @admin path /admin*
     @internal_verify path /internal/verify
     @wireguard remote_ip 10.77.4.0/24
+    @admin_private remote_ip 10.77.4.0/24 100.64.0.0/10
     handle @admin {
-        handle @wireguard {
+        handle @admin_private {
             reverse_proxy 127.0.0.1:3000
         }
         respond "Private route" 403

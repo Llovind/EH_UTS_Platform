@@ -1,6 +1,6 @@
 # MBC LAS Week 4 mini-CTF portal
 
-This is a deliberately small portal for the LAS Week 4 recruitment exercise. The portal is public over HTTPS at the chosen placeholder subdomain, while every target VM and vulnerable service remains inside the WireGuard network (`10.77.4.0/24`). The admin area requires an admin identity and a source IP inside the WireGuard CIDR.
+This is a deliberately small portal for the LAS Week 4 recruitment exercise. The portal is public over HTTPS at the chosen placeholder subdomain, while every target VM and vulnerable service remains inside the WireGuard network (`10.77.4.0/24`). The admin area requires an admin identity and a source IP inside the WireGuard or Tailscale network.
 
 ## What is included
 
@@ -33,7 +33,7 @@ The portal uses Node's built-in `node:sqlite`, so use Node.js 22.5 or newer (the
 
 - Set `PORTAL_OPEN_AT` to Wednesday 2 September 2026 11:00 WIB and `GAME_LOCK_AT` to Friday 4 September 2026 18:00 WIB for this event.
 - Keep `data/las-week4.db` mode `0700` and back it up offline. Never put `.env`, invite CSVs, or flags in GitHub.
-- Use the portal admin page only from a WireGuard-connected device. The server rejects admin requests from public addresses.
+- Use the portal admin page only from a WireGuard- or Tailscale-connected device. The server rejects admin requests from public addresses.
 - Target IPs must be assigned from the target peer range (`10.77.4.100–129`); the form rejects other networks.
 - Admin pages: `/admin/review`, `/admin/peers`, `/admin/health`, `/admin/event`, and `/admin/audit`.
 - `OPEN` is an explicit early-open override. `LOCK` is global and final; it freezes challenge writes, flag submissions, leaderboard changes, and challenge statuses.

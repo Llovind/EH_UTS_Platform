@@ -376,7 +376,7 @@ function requireCurrentPassword(req, res, next) {
 }
 function requireAdmin(req, res, next) {
   if (!req.user || req.user.role !== 'admin') return res.status(404).send(renderPage('Not found', notice('Not found', 'This resource does not exist.', 'bad'), req));
-  if (!isInCidr(clientIp(req), cfg.wgCidr)) return res.status(403).send(renderPage('Private route', notice('Private route', 'Admin access is available only from the WireGuard network.', 'bad'), req));
+  if (!isInCidr(clientIp(req), cfg.wgCidr) && !isInCidr(clientIp(req), cfg.tailscaleCidr)) return res.status(403).send(renderPage('Private route', notice('Private route', 'Admin access is available only from the WireGuard or Tailscale network.', 'bad'), req));
   next();
 }
 function phaseError(req, title, text) { return renderPage(title, notice(title, text, 'info'), req); }
@@ -1117,7 +1117,7 @@ app.get('/admin', requireAdmin, (req, res) => {
   const degraded = db.prepare("SELECT COUNT(*) AS count FROM challenges WHERE health_status='degraded'").get().count;
   const content = pageHead('ADMIN / OPERATIONS', 'Review queue', 'Approve only labs that pass the deterministic Light Check.') +
     '<div class="stats">' + stat('Pending review', String(pending), 'needs mentor decision') + stat('Approved', String(approved), 'published when live') + stat('Degraded', String(degraded), 'target IP unreachable') + '</div>' +
-    '<div class="admin-actions"><a class="button primary" href="/admin/review">OPEN REVIEW QUEUE</a><a class="button ghost" href="/admin/peers">PEERS</a><a class="button ghost" href="/admin/health">HEALTH</a><a class="button ghost" href="/admin/event">EVENT</a><a class="button ghost" href="/admin/audit">AUDIT</a></div><div class="security-callout"><strong>PRIVATE ROUTE</strong><span>Admin access requires the admin account and a source inside the WireGuard CIDR.</span></div>';
+    '<div class="admin-actions"><a class="button primary" href="/admin/review">OPEN REVIEW QUEUE</a><a class="button ghost" href="/admin/peers">PEERS</a><a class="button ghost" href="/admin/health">HEALTH</a><a class="button ghost" href="/admin/event">EVENT</a><a class="button ghost" href="/admin/audit">AUDIT</a></div><div class="security-callout"><strong>PRIVATE ROUTE</strong><span>Admin access requires the admin account and a source inside the WireGuard or Tailscale network.</span></div>';
   res.send(renderPage('Admin', content, req));
 });
 app.get('/admin/review', requireAdmin, (req, res) => {
