@@ -296,6 +296,9 @@ test('admin review is protected by WireGuard source and redacts flag material fr
   });
   assert.equal(login.status, 302);
   const adminCookie = sessionCookie(login);
+  const loggedInLogin = await fetch(base + '/login', { redirect: 'manual', headers: { cookie: adminCookie } });
+  assert.equal(loggedInLogin.status, 302);
+  assert.equal(loggedInLogin.headers.get('location'), '/admin');
   const publicAdmin = await fetch(base + '/admin', { headers: { cookie: adminCookie, 'x-forwarded-for': '198.51.100.10' } });
   assert.equal(publicAdmin.status, 403);
   const tailscaleAdmin = await fetch(base + '/admin', { headers: { cookie: adminCookie, 'x-forwarded-for': '100.83.254.54' } });

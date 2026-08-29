@@ -900,6 +900,7 @@ function loginForm(req, error = '', caasId = '') {
     formButton('SIGN IN') + '</form><p class="form-foot">Not activated yet? <a href="/register">Activate account</a></p>';
 }
 app.get('/login', (req, res) => {
+  if (req.user) return res.redirect(req.user.role === 'admin' ? '/admin' : '/workspace');
   res.send(renderPage('Sign in', loginForm(req), req));
 });
 app.post('/login', authLimiter, requireCsrf, (req, res) => {
