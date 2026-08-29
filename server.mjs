@@ -1442,16 +1442,18 @@ app.get('/lab-space/:id', requireAuth, (req, res) => {
   const solved = Boolean(db.prepare('SELECT id FROM submissions WHERE user_id=? AND challenge_id=? AND correct=1').get(req.user.id, challenge.id));
   const own = challenge.owner_user_id === req.user.id;
   let content = pageHead('LAB SPACE / LAB ' + String(challenge.id).padStart(2, '0'), challenge.title, 'Solver and owner identities are hidden.');
+  content += '<div class="lab-detail-stack">';
   content += '<div class="target-banner"><span class="kicker">TARGET IP</span><strong>' + esc(challenge.target_ip) + '</strong><button type="button" class="copy-button inline" data-copy="' + esc(challenge.target_ip) + '">COPY IP</button>' + statusBadge(challenge.health_status) + '</div>';
-  content += '<section class="card"><h2>Services</h2><div class="service-table">' + services.map((service) => '<div><code>' + esc(service.port + '/' + service.protocol) + '</code><strong>' + esc(service.label) + '</strong><span>' + esc(service.note || '') + '</span></div>').join('') + '</div><details><summary>COMMANDS</summary>' + services.map((service) => commandBlock('nmap -sV -p ' + service.port + ' ' + challenge.target_ip)).join('') + '</details></section>';
-  content += '<section class="card"><h2>Challenge</h2><p>' + nl2br(challenge.description) + '</p><details><summary>INITIAL HINT</summary><p>' + nl2br(challenge.initial_hint) + '</p></details></section>';
+  content += '<section class="card lab-card"><h2>Services</h2><div class="service-table">' + services.map((service) => '<div><code>' + esc(service.port + '/' + service.protocol) + '</code><strong>' + esc(service.label) + '</strong><span>' + esc(service.note || '') + '</span></div>').join('') + '</div><details><summary>COMMANDS</summary>' + services.map((service) => commandBlock('nmap -sV -p ' + service.port + ' ' + challenge.target_ip)).join('') + '</details></section>';
+  content += '<section class="card lab-card"><h2>Challenge</h2><p>' + nl2br(challenge.description) + '</p><details><summary>INITIAL HINT</summary><p>' + nl2br(challenge.initial_hint) + '</p></details></section>';
   if (req.user.isVisitor) content += '<div class="callout"><strong>READ-ONLY VISITOR</strong><p>Visitor accounts can inspect labs but cannot submit flags or reports.</p></div>';
   else if (own) content += '<div class="callout danger"><strong>SELF-SOLVE BLOCKED</strong><p>Challenge owners cannot submit flags for their own lab.</p></div>';
   else if (currentPhase() === 'LOCKED') content += '<div class="notice compact"><strong>LOCKED</strong><p>Leaderboard and flag submissions are frozen.</p></div>';
   else if (solved) content += '<div class="notice compact good"><strong>SOLVED</strong><p>Your flag has already been recorded.</p></div>';
-  else content += '<form method="post" action="/lab-space/' + challenge.id + '/flag" class="flag-form">' + csrfField(req) + '<label>Submit flag<input name="flag" maxlength="120" autocomplete="off" placeholder="MBC{...}" required></label>' + formButton('SUBMIT FLAG') + '</form>';
+  content += '</div><div class="lab-detail-actions">';
+  if (!req.user.isVisitor && !own && currentPhase() === 'LIVE' && !solved) content += '<form method="post" action="/lab-space/' + challenge.id + '/flag" class="flag-form">' + csrfField(req) + '<label>Submit flag<input name="flag" maxlength="120" autocomplete="off" placeholder="MBC{...}" required></label>' + formButton('SUBMIT FLAG') + '</form>';
   if (currentPhase() === 'LIVE' && !req.user.isVisitor) content += '<form method="post" action="/lab-space/' + challenge.id + '/report" class="report-form">' + csrfField(req) + formButton('REPORT UNREACHABLE', 'danger') + '</form>';
-  content += '<a class="button ghost" href="/lab-space">BACK TO LAB SPACE</a>';
+  content += '<a class="button ghost lab-back" href="/lab-space">BACK TO LAB SPACE</a></div>';
   res.send(renderPage(challenge.title, content, req));
 });
 app.post('/lab-space/:id/flag', submitLimiter, requireAuth, requireWriteAccess, requireCsrf, requireLive, (req, res) => {

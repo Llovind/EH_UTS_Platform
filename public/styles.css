@@ -170,6 +170,14 @@ summary { cursor: pointer; color: var(--blue); font-family: "IBM Plex Mono", Con
 
 .target-banner { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; margin-bottom: 1rem; padding: .9rem 1rem; border: 1px solid var(--blue); background: var(--blue-soft); }
 .target-banner strong { color: var(--text); font: 700 1.2rem "IBM Plex Mono", Consolas, monospace; }
+.lab-detail-stack { display: grid; gap: 1.5rem; }
+.lab-detail-stack .target-banner { margin-bottom: 0; }
+.lab-card { padding: 1.5rem; }
+.lab-card h2 { margin: 0 0 1.15rem; }
+.lab-card > p { margin: 1rem 0; line-height: 1.7; }
+.lab-card details { margin-top: 1.25rem; }
+.lab-detail-stack > .callout, .lab-detail-stack > .notice { margin-top: 0; }
+.lab-detail-actions { display: grid; gap: 1.15rem; margin-top: 1.5rem; }
 .preview-stack { display: grid; gap: 1rem; }
 .preview-stack .target-banner { margin-bottom: 0; }
 .preview-stack .card { padding: 1.15rem; }
@@ -178,9 +186,11 @@ summary { cursor: pointer; color: var(--blue); font-family: "IBM Plex Mono", Con
 .service-table { display: grid; gap: .4rem; }
 .service-table > div { display: grid; grid-template-columns: 7rem 10rem 1fr; gap: .75rem; padding: .65rem 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: .76rem; }
 .service-table strong { color: var(--text); }
-.flag-form { display: flex; gap: .5rem; margin-top: 1rem; }
+.flag-form { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem; margin-top: 0; padding: 1.25rem; border: 1px solid var(--line); background: var(--surface); }
+.flag-form label { flex: 1 1 20rem; min-width: min(100%, 16rem); }
 .flag-form input { min-width: 0; }
-.report-form { margin-top: 1rem; }
+.report-form { margin: 0; padding-top: 1.1rem; border-top: 1px dashed var(--line); }
+.lab-back { margin-top: .35rem; }
 
 .scoreboard { border-top: 1px solid var(--line); }
 .score-row { display: grid; grid-template-columns: 4rem 1fr 7rem 7rem; gap: .75rem; align-items: center; min-height: 3.25rem; padding: 0 .75rem; border-bottom: 1px solid var(--line); font: .78rem "IBM Plex Mono", Consolas, monospace; }
@@ -230,6 +240,11 @@ summary { cursor: pointer; color: var(--blue); font-family: "IBM Plex Mono", Con
   .review-actions-availability .note-form { grid-template-columns: 1fr; }
   .review-back { width: 100%; }
   .shell > a.button, .admin-card > .button { width: 100%; }
+  .lab-card { padding: 1.15rem; }
+  .lab-detail-actions { gap: 1rem; }
+  .flag-form { align-items: stretch; flex-direction: column; }
+  .flag-form label { min-width: 0; }
+  .flag-form .button, .report-form .button, .lab-back { width: 100%; }
   .form-actions { align-items: stretch; flex-direction: column; }
   .action-group { width: 100%; }
   .action-group-navigation { margin-left: 0; }
