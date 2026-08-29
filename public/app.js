@@ -76,7 +76,8 @@
         form.dataset.submitting = 'true';
         form.classList.add('is-submitting');
         const submitter = event.submitter;
-        const action = submitter?.formAction || form.action || window.location.href;
+        const submitterAction = submitter?.getAttribute('formaction');
+        const action = submitterAction ? new URL(submitterAction, document.baseURI).href : (form.action || window.location.href);
         const buttons = [...form.querySelectorAll('button[type="submit"]')];
         buttons.forEach((button) => { button.disabled = true; });
         try {
