@@ -40,6 +40,9 @@ code { color: var(--blue); }
 .hero-compact h1 em { color: var(--blue); font-style: normal; }
 .hero-compact p { max-width: 620px; margin: 0; color: var(--muted); }
 .hero-actions, .form-actions, .inline-actions, .admin-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .65rem; }
+.form-actions { justify-content: space-between; gap: 1rem 1.25rem; margin-top: .25rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }
+.action-group { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.action-group-navigation { margin-left: auto; }
 .hero-actions { margin-top: 1.5rem; }
 .hero-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 780px; margin-top: 3rem; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .hero-meta span { display: flex; flex-direction: column; gap: .15rem; padding: .9rem 1rem .9rem 0; border-right: 1px solid var(--line); }
@@ -48,7 +51,7 @@ code { color: var(--blue); }
 .hero-meta strong { color: var(--text); font: 700 1rem "IBM Plex Mono", Consolas, monospace; }
 .hero-meta small { color: var(--muted); font-size: .62rem; text-transform: uppercase; }
 
-.button { display: inline-flex; align-items: center; justify-content: center; min-height: 2.65rem; padding: .62rem 1rem; border: 1px solid var(--line); background: var(--surface-strong); color: var(--text); font: 700 .68rem "IBM Plex Mono", Consolas, monospace; letter-spacing: .08em; text-transform: uppercase; }
+.button { display: inline-flex; align-items: center; justify-content: center; min-height: 2.8rem; padding: .7rem 1.05rem; border: 1px solid var(--line); background: var(--surface-strong); color: var(--text); font: 700 .72rem "IBM Plex Mono", Consolas, monospace; letter-spacing: .07em; text-transform: uppercase; }
 .button:hover { border-color: var(--blue); color: var(--blue); }
 .button.primary { border-color: var(--blue); background: var(--blue); color: #050505; }
 .button.primary:hover { background: #78aaff; color: #050505; }
@@ -184,6 +187,9 @@ summary { cursor: pointer; color: var(--blue); font-family: "IBM Plex Mono", Con
   .hero-meta span:last-child { border-bottom: 0; }
   .page-head { align-items: flex-start; flex-direction: column; }
   .form-card, .form-wrap { padding: 1rem; }
+  .form-actions { align-items: stretch; flex-direction: column; }
+  .action-group { width: 100%; }
+  .action-group-navigation { margin-left: 0; }
   .card dl { grid-template-columns: 1fr; gap: .2rem; }
   .card dd { margin-bottom: .65rem; }
   .service-row { grid-template-columns: 1fr 1fr; }

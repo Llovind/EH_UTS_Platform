@@ -238,6 +238,8 @@ test('runnable setup surface exposes health, public installer, and enrollment se
   const builderCsrf = csrfFrom(builderPageText);
   assert.doesNotMatch(builderPageText, /recovery|reset/i);
   assert.match(builderPageText, /MENTOR NOTES/);
+  assert.match(builderPageText, /action-group-primary/);
+  assert.match(builderPageText, /action-group-navigation/);
   assert.doesNotMatch(builderPageText, /Learning objective|Initial foothold summary|Enumeration clue|Privilege-escalation technique|Flag location summary/);
   const learnPage = await fetch(base + '/learn', { headers: { cookie } });
   const learnText = await learnPage.text();
