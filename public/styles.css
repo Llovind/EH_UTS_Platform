@@ -68,6 +68,17 @@ code { color: var(--blue); }
 .stat span { color: var(--muted); font: .63rem "IBM Plex Mono", Consolas, monospace; letter-spacing: .1em; text-transform: uppercase; }
 .stat strong { color: var(--blue); font: 700 1.25rem "IBM Plex Mono", Consolas, monospace; }
 .stat small { color: var(--muted); font-size: .66rem; }
+.review-stats { gap: 1rem; margin-bottom: 1.5rem; }
+.review-content { display: grid; gap: 1rem; }
+.review-card { padding: 1.25rem; }
+.review-card h2 { margin: .45rem 0 1rem; }
+.review-card > p { margin: .65rem 0; }
+.review-player .service-table { margin-top: 1.15rem; }
+.review-mentor dl { row-gap: .75rem; margin-top: 1.25rem; }
+.review-actions { display: grid; gap: 1rem; margin-top: 1.25rem; padding-top: 1.1rem; border-top: 1px solid var(--line); }
+.review-actions-primary, .review-actions-availability { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.review-actions-availability { padding-top: .95rem; border-top: 1px dashed var(--line); }
+.review-back { margin-top: 1.25rem; }
 
 .step-list { display: grid; gap: .65rem; }
 .step-card, .step-panel { display: flex; align-items: flex-start; gap: 1rem; padding: 1rem; border: 1px solid var(--line); background: var(--surface); }
@@ -187,6 +198,12 @@ summary { cursor: pointer; color: var(--blue); font-family: "IBM Plex Mono", Con
   .hero-meta span:last-child { border-bottom: 0; }
   .page-head { align-items: flex-start; flex-direction: column; }
   .form-card, .form-wrap { padding: 1rem; }
+  .review-card { padding: 1rem; }
+  .review-actions-primary, .review-actions-availability { align-items: stretch; }
+  .review-actions-primary > form, .review-actions-availability > form { width: 100%; }
+  .review-actions .note-form { flex-direction: column; align-items: stretch; }
+  .review-actions .note-form input, .review-actions .button { width: 100%; }
+  .review-back { width: 100%; }
   .form-actions { align-items: stretch; flex-direction: column; }
   .action-group { width: 100%; }
   .action-group-navigation { margin-left: 0; }

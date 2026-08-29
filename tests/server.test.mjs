@@ -343,6 +343,8 @@ test('admin review is protected by WireGuard source and redacts flag material fr
   assert.equal(review.status, 200);
   assert.match(reviewText, /CAAS-REVIEW/);
   assert.match(reviewText, /Follow the intended path/);
+  assert.match(reviewText, /review-content/);
+  assert.match(reviewText, /review-actions-availability/);
   assert.doesNotMatch(reviewText, /hidden-flag-hash|hidden-encrypted/);
   const approveCsrf = csrfFrom(reviewText);
   const approved = await fetch(base + '/admin/review/1/approve', {
