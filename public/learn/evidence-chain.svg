@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="380" viewBox="0 0 1200 380" role="img" aria-labelledby="title desc">
+  <title id="title">Evidence chain for a privilege escalation finding</title>
+  <desc id="desc">A defensible finding links observation, interpretation, controlled proof, impact, and remediation.</desc>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#6ba2ff"/></marker><style>.bg{fill:#171a1e}.box{fill:#22272d;stroke:#353b44;stroke-width:2}.line{stroke:#6ba2ff;stroke-width:2;marker-end:url(#a)}.n{fill:#6ba2ff;font:700 14px monospace}.h{fill:#e7e9ec;font:700 18px Arial,sans-serif}.p{fill:#a3a9b2;font:14px Arial,sans-serif}</style></defs>
+  <rect class="bg" width="1200" height="380"/>
+  <path class="line" d="M235 180H265M455 180H485M675 180H705M895 180H925"/>
+  <g transform="translate(25 105)"><rect class="box" width="210" height="150"/><text class="n" x="16" y="30">01</text><text class="h" x="16" y="62">Observation</text><text class="p" x="16" y="98">Command, timestamp,</text><text class="p" x="16" y="122">relevant output</text></g>
+  <g transform="translate(265 105)"><rect class="box" width="190" height="150"/><text class="n" x="16" y="30">02</text><text class="h" x="16" y="62">Interpretation</text><text class="p" x="16" y="98">Why the trust</text><text class="p" x="16" y="122">boundary is weak</text></g>
+  <g transform="translate(485 105)"><rect class="box" width="190" height="150"/><text class="n" x="16" y="30">03</text><text class="h" x="16" y="62">Proof</text><text class="p" x="16" y="98">Small, repeatable,</text><text class="p" x="16" y="122">non-destructive</text></g>
+  <g transform="translate(705 105)"><rect class="box" width="190" height="150"/><text class="n" x="16" y="30">04</text><text class="h" x="16" y="62">Impact</text><text class="p" x="16" y="98">Privilege gained</text><text class="p" x="16" y="122">and affected scope</text></g>
+  <g transform="translate(925 105)"><rect class="box" width="250" height="150"/><text class="n" x="16" y="30">05</text><text class="h" x="16" y="62">Hardening</text><text class="p" x="16" y="98">Least privilege, ownership,</text><text class="p" x="16" y="122">validation and cleanup</text></g>
+</svg>

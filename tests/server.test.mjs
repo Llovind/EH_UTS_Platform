@@ -172,6 +172,27 @@ test('runnable setup surface exposes health, public installer, and enrollment se
   assert.ok(workspaceText.indexOf('SETUP TARGET') < workspaceText.indexOf('BUILD YOUR LAB'));
   assert.ok(workspaceText.indexOf('BUILD YOUR LAB') < workspaceText.indexOf('SETUP ATTACKER'));
 
+  const learn = await fetch(base + '/learn', { headers: { cookie } });
+  const learnOverviewText = await learn.text();
+  assert.equal(learn.status, 200);
+  assert.match(learnOverviewText, /Think in evidence/);
+  assert.match(learnOverviewText, /Linux identity and permissions/);
+  assert.match(learnOverviewText, /Mini CTF lab quality gate/);
+  assert.match(learnOverviewText, /data-module-card="scope"/);
+
+  const identityModule = await fetch(base + '/learn/identity', { headers: { cookie } });
+  const identityText = await identityModule.text();
+  assert.equal(identityModule.status, 200);
+  assert.match(identityText, /WHAT TO LOOK FOR/);
+  assert.match(identityText, /MODULE CHECKPOINT/);
+  assert.match(identityText, /linux-identity\.svg/);
+  assert.match(identityText, /Linux credentials\(7\)/);
+
+  const learnDiagram = await fetch(base + '/learn/pe-workflow.svg');
+  assert.equal(learnDiagram.status, 200);
+  assert.match(learnDiagram.headers.get('content-type') || '', /image\/svg\+xml/);
+  assert.match(await learnDiagram.text(), /Privilege escalation learning workflow/);
+
   const setupOverview = await fetch(base + '/setup', { headers: { cookie } });
   const setupOverviewText = await setupOverview.text();
   assert.equal(setupOverview.status, 200);
@@ -473,7 +494,7 @@ test('visitor accounts are read-only, hidden from scoreboard, and cannot access 
 
   const learn = await fetch(base + '/learn', { headers: { cookie: visitorCookie } });
   assert.equal(learn.status, 200);
-  assert.match(await learn.text(), /Week 4 scope/);
+  assert.match(await learn.text(), /Scope and operating rules/);
 
   const admin = await fetch(base + '/admin', { headers: { cookie: visitorCookie } });
   assert.equal(admin.status, 404);

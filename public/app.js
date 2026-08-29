@@ -134,6 +134,74 @@
 
   setupFormHandling();
 
+  const learnStorageKey = 'mbc-las-w4-learn-progress-v1';
+  function readLearnProgress() {
+    try {
+      const value = JSON.parse(window.localStorage.getItem(learnStorageKey) || '[]');
+      return new Set(Array.isArray(value) ? value.filter((item) => typeof item === 'string') : []);
+    } catch {
+      return new Set();
+    }
+  }
+  function writeLearnProgress(progress) {
+    try { window.localStorage.setItem(learnStorageKey, JSON.stringify([...progress])); } catch {}
+  }
+  function setupLearnExperience() {
+    const progress = readLearnProgress();
+    document.querySelectorAll('[data-module-card]').forEach((card) => {
+      const complete = progress.has(card.dataset.moduleCard || '');
+      card.classList.toggle('is-complete', complete);
+      const label = card.querySelector('[data-module-completion]');
+      if (label) label.textContent = complete ? 'COMPLETED' : 'NOT STARTED';
+    });
+
+    const moduleRoot = document.querySelector('[data-learn-module]');
+    if (!moduleRoot) return;
+    const moduleId = moduleRoot.dataset.learnModule || '';
+    const checkpoint = document.querySelector('.learn-checkpoint');
+    const completeButton = document.querySelector('[data-mark-complete]');
+    const completeStatus = document.querySelector('[data-complete-status]');
+    function paintCompleteState() {
+      const complete = progress.has(moduleId);
+      checkpoint?.classList.toggle('is-complete', complete);
+      if (completeButton) completeButton.textContent = complete ? 'MODULE COMPLETED' : 'MARK MODULE COMPLETE';
+      if (completeStatus) completeStatus.textContent = complete ? 'Module ini sudah ditandai selesai pada browser ini.' : 'Progress disimpan pada browser ini.';
+    }
+    paintCompleteState();
+    completeButton?.addEventListener('click', () => {
+      progress.add(moduleId);
+      writeLearnProgress(progress);
+      paintCompleteState();
+      showToast('Module completed', 'Progress belajar tersimpan pada browser ini.', 'success');
+    });
+
+    const progressBar = document.querySelector('[data-reading-progress]');
+    function updateReadingProgress() {
+      if (!progressBar) return;
+      const article = document.querySelector('.learn-article');
+      if (!article) return;
+      const top = article.getBoundingClientRect().top + window.scrollY;
+      const distance = Math.max(1, article.offsetHeight - window.innerHeight);
+      const amount = Math.min(1, Math.max(0, (window.scrollY - top) / distance));
+      progressBar.style.width = Math.round(amount * 100) + '%';
+    }
+    updateReadingProgress();
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('resize', updateReadingProgress);
+
+    const links = new Map([...document.querySelectorAll('[data-toc-link]')].map((link) => [link.dataset.tocLink, link]));
+    if ('IntersectionObserver' in window && links.size) {
+      const observer = new IntersectionObserver((entries) => {
+        const visible = entries.filter((entry) => entry.isIntersecting).sort((left, right) => left.boundingClientRect.top - right.boundingClientRect.top)[0];
+        if (!visible) return;
+        links.forEach((link) => link.classList.toggle('is-active', link.dataset.tocLink === visible.target.id));
+      }, { rootMargin: '-18% 0px -68% 0px', threshold: 0 });
+      document.querySelectorAll('[data-learn-section]').forEach((section) => observer.observe(section));
+    }
+  }
+
+  setupLearnExperience();
+
   const statusNode = document.querySelector('[data-setup-status]');
   if (!statusNode) return;
   const peerType = statusNode.dataset.peerType;

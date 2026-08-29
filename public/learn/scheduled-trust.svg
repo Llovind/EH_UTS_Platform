@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+  <title id="title">Scheduled privileged execution trust chain</title>
+  <desc id="desc">A scheduler triggers a privileged service or script whose files, paths, interpreter, and environment form a trust chain.</desc>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#6ba2ff"/></marker><style>.bg{fill:#171a1e}.box{fill:#22272d;stroke:#353b44;stroke-width:2}.risk{fill:#2e2022;stroke:#e47777}.line{stroke:#6ba2ff;stroke-width:2;marker-end:url(#a)}.k{fill:#6ba2ff;font:700 14px monospace}.h{fill:#e7e9ec;font:700 19px Arial,sans-serif}.p{fill:#a3a9b2;font:14px Arial,sans-serif}.r{fill:#e47777;font:700 13px monospace}</style></defs>
+  <rect class="bg" width="1200" height="360"/>
+  <path class="line" d="M250 180H330M570 180H650M890 180H970"/>
+  <g transform="translate(30 105)"><rect class="box" width="220" height="150"/><text class="k" x="18" y="32">TRIGGER</text><text class="h" x="18" y="68">Cron / timer</text><text class="p" x="18" y="102">When does it run?</text><text class="p" x="18" y="126">Which unit or command?</text></g>
+  <g transform="translate(330 105)"><rect class="box" width="240" height="150"/><text class="k" x="18" y="32">EXECUTION CONTEXT</text><text class="h" x="18" y="68">User / group</text><text class="p" x="18" y="102">Root by default?</text><text class="p" x="18" y="126">Environment and cwd?</text></g>
+  <g transform="translate(650 105)"><rect class="risk" width="240" height="150"/><text class="r" x="18" y="32">TRUST BOUNDARY</text><text class="h" x="18" y="68">File + path</text><text class="p" x="18" y="102">Writable script?</text><text class="p" x="18" y="126">Relative command or config?</text></g>
+  <g transform="translate(970 105)"><rect class="box" width="200" height="150"/><text class="k" x="18" y="32">EFFECT</text><text class="h" x="18" y="68">Privileged work</text><text class="p" x="18" y="102">Proof, impact,</text><text class="p" x="18" y="126">then hardening</text></g>
+</svg>

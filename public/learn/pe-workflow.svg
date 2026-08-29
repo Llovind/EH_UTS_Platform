@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="340" viewBox="0 0 1200 340" role="img" aria-labelledby="title desc">
+  <title id="title">Privilege escalation learning workflow</title>
+  <desc id="desc">A six-step evidence-led workflow from scope confirmation through hardening.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" fill="#6ba2ff"/></marker>
+    <style>
+      .bg{fill:#171a1e}.grid{stroke:#242a31;stroke-width:1}.line{stroke:#6ba2ff;stroke-width:2;marker-end:url(#arrow)}.box{fill:#22272d;stroke:#353b44;stroke-width:2}.box.active{stroke:#6ba2ff}.n{fill:#6ba2ff;font:700 16px monospace}.h{fill:#e7e9ec;font:700 19px Arial,sans-serif}.p{fill:#a3a9b2;font:14px Arial,sans-serif}
+    </style>
+  </defs>
+  <rect class="bg" width="1200" height="340"/>
+  <path class="grid" d="M0 70H1200M0 170H1200M0 270H1200M100 0V340M300 0V340M500 0V340M700 0V340M900 0V340M1100 0V340"/>
+  <path class="line" d="M195 170H225M385 170H415M575 170H605M765 170H795M955 170H985"/>
+  <g transform="translate(25 105)"><rect class="box active" width="170" height="130"/><text class="n" x="16" y="28">01</text><text class="h" x="16" y="58">Scope</text><text class="p" x="16" y="84">Target, rules,</text><text class="p" x="16" y="105">success condition</text></g>
+  <g transform="translate(215 105)"><rect class="box" width="170" height="130"/><text class="n" x="16" y="28">02</text><text class="h" x="16" y="58">Context</text><text class="p" x="16" y="84">Identity, OS,</text><text class="p" x="16" y="105">services, trust</text></g>
+  <g transform="translate(405 105)"><rect class="box" width="170" height="130"/><text class="n" x="16" y="28">03</text><text class="h" x="16" y="58">Inventory</text><text class="p" x="16" y="84">Permissions and</text><text class="p" x="16" y="105">privileged paths</text></g>
+  <g transform="translate(595 105)"><rect class="box" width="170" height="130"/><text class="n" x="16" y="28">04</text><text class="h" x="16" y="58">Hypothesis</text><text class="p" x="16" y="84">Explain why a</text><text class="p" x="16" y="105">path may work</text></g>
+  <g transform="translate(785 105)"><rect class="box" width="170" height="130"/><text class="n" x="16" y="28">05</text><text class="h" x="16" y="58">Validate</text><text class="p" x="16" y="84">Smallest safe</text><text class="p" x="16" y="105">proof in the lab</text></g>
+  <g transform="translate(975 105)"><rect class="box active" width="200" height="130"/><text class="n" x="16" y="28">06</text><text class="h" x="16" y="58">Evidence</text><text class="p" x="16" y="84">Impact, cleanup,</text><text class="p" x="16" y="105">and hardening</text></g>
+</svg>

@@ -25,6 +25,7 @@ import { eventPhase, isBefore, scoreForSolved } from './src/game.mjs';
 import { buildConfig } from './src/config.mjs';
 import { allocatePeerAddress, enrollmentExpiry, parsePeerPool, validateEnrollment } from './src/wireguard.mjs';
 import { handshakeIsStale, healthDecision } from './src/health.mjs';
+import { learnTracks, learnModules } from './src/learn-content.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -416,13 +417,14 @@ function confirmationField(label, expected) {
 }
 function renderPage(title, content, req) {
   const user = req.user;
+  const documentLanguage = req.path === '/learn' || req.path.startsWith('/learn/') ? 'id' : 'en';
   const nav = user
     ? '<a href="/setup">Lab Config</a><a href="/learn">Learn</a><a href="/build">Build</a><a href="/lab-space">Lab Space</a><a href="/scoreboard">Scoreboard</a>' +
       (user.role === 'admin' ? '<a href="/admin">Admin</a>' : '') +
       '<span class="account-chip"><span>ACCOUNT</span><strong>' + esc(req.user.caasId) + '</strong></span><form class="nav-form" method="post" action="/logout">' + csrfField(req) + '<button type="submit">Sign out</button></form>'
     : '<a href="/scoreboard">Scoreboard</a><a class="nav-cta" href="/login">Sign in</a>';
-  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="MBC LAS Week 4 portal"><title>' +
-    esc(title) + ' · MBC LAS W4</title><link rel="icon" href="/logo.png"><link rel="stylesheet" href="/styles.css?v=20260829-ui"><script src="/app.js?v=20260829-toast-2" defer></script></head><body><header class="site-header"><a class="brand" href="/"><img src="/logo.png" alt="MBC Laboratory"><span>LAS / WEEK 04</span></a><nav>' +
+  return '<!doctype html><html lang="' + documentLanguage + '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="MBC LAS Week 4 portal"><title>' +
+    esc(title) + ' · MBC LAS W4</title><link rel="icon" href="/logo.png"><link rel="stylesheet" href="/styles.css?v=20260830-learn"><script src="/app.js?v=20260830-learn" defer></script></head><body><header class="site-header"><a class="brand" href="/"><img src="/logo.png" alt="MBC Laboratory"><span>LAS / WEEK 04</span></a><nav>' +
     nav + '</nav></header><main class="shell">' + content + '</main><footer class="site-footer"><span>MBC LABORATORY · CYBER SECURITY DIVISION</span><span>AUTHORIZED TRAINING NETWORK · ' + esc(cfg.wgCidr) + '</span></footer></body></html>';
 }
 function pageHead(kicker, title, subtitle = '') {
@@ -845,16 +847,6 @@ async function runLightCheck(challenge, peer) {
   }
   return result;
 }
-
-const modules = [
-  { id: 'overview', title: 'Week 4 scope', objective: 'Bangun satu target Linux dengan satu jalur privilege escalation yang terukur.', commands: [], note: 'Gunakan hanya subnet WireGuard LAS. Jangan melakukan scan subnet-wide, password guessing, atau exploit terhadap sistem di luar lab.' },
-  { id: 'enumeration', title: 'Enumeration baseline', objective: 'Kumpulkan identitas, OS, service, permission, dan jalur kandidat sebelum menguji hipotesis.', commands: ['id && whoami', 'uname -a && cat /etc/os-release', 'ss -tulpn', 'sudo -l', 'find / -perm -4000 -type f 2>/dev/null', 'getcap -r / 2>/dev/null'], note: 'Catat output yang relevan. Enumeration adalah observasi, bukan langsung eksploitasi.' },
-  { id: 'permissions', title: 'Linux permissions', objective: 'Bedakan owner, group, mode bits, effective UID, SUID, dan SGID.', commands: ['ls -la /path/to/file', 'stat /path/to/file', 'find / -perm -2000 -type f 2>/dev/null'], note: 'SUID membuat executable berjalan dengan effective UID owner. Fokus pada file yang dapat dipengaruhi input user.' },
-  { id: 'sudo', title: 'Sudo misconfiguration', objective: 'Identifikasi command yang dapat dijalankan melalui sudo dan validasi batasnya.', commands: ['sudo -l', 'sudo -V | head -n 8'], note: 'Jangan menebak password berulang. Sudo rule yang terlalu luas adalah objek analisis; dokumentasikan rule dan dampaknya.' },
-  { id: 'capabilities', title: 'Linux capabilities', objective: 'Kenali capability efektif pada binary dan bedakan dari SUID.', commands: ['getcap -r / 2>/dev/null', 'capsh --print 2>/dev/null | head -n 25'], note: 'Capability memberikan subset privilege, bukan otomatis full root. Jelaskan capability yang relevan dan mengapa berisiko.' },
-  { id: 'scheduled', title: 'Cron dan systemd', objective: 'Cari scheduled task privileged yang memiliki path atau script writable.', commands: ['find /etc/cron* -type f -maxdepth 2 -ls 2>/dev/null', 'systemctl list-timers --all 2>/dev/null'], note: 'Hanya uji file milik lab. Jangan mengubah scheduled task host VPS atau sistem di luar target.' },
-  { id: 'evidence', title: 'Evidence dan hardening', objective: 'Tulis bukti yang dapat diulang, dampak, perbaikan, dan cara memvalidasi perbaikan.', commands: ['date -Is', 'hostname', 'id'], note: 'Setiap temuan minimal memiliki command, output penting, penjelasan, dan hardening recommendation.' },
-];
 
 function assignmentBrief() {
   return '<section class="card"><span class="kicker">WEEK 4 / DELIVERABLE</span><h2>Build one controlled lab</h2><p class="muted">Kerjakan seluruh challenge di target Ubuntu milikmu. VPS target bersifat optional; Ubuntu 24.04 direkomendasikan.</p><ul><li>Minimal 3 service yang dapat dienumerasi.</li><li>Initial access sebagai user non-root.</li><li>Satu jalur privilege escalation Linux yang dapat dibuktikan.</li><li>Satu flag dengan format <code>MBC{...}</code>.</li><li>Isi challenge langsung di <strong>BUILD</strong>; tidak perlu mengirim data credential ke mentor.</li></ul></section>';
@@ -1325,18 +1317,69 @@ app.get('/admin/audit', requireAdmin, (req, res) => {
   res.send(renderPage('Audit trail', content, req));
 });
 
+function learnInline(value) {
+  return esc(value || '').replace(/`([^`]+)`/g, '<code>$1</code>');
+}
+function learnTrack(trackId) {
+  return learnTracks.find((track) => track.id === trackId);
+}
+function learnCommandCard(command) {
+  let output = '<article class="learn-command-card"><div class="learn-command-head"><span class="kicker">SAFE COMMAND</span><h3>' + esc(command.label) + '</h3></div>';
+  output += commandBlock(command.value);
+  output += '<div class="learn-command-notes"><div><span>WHAT IT DOES</span><p>' + learnInline(command.explanation) + '</p></div><div><span>WHAT TO LOOK FOR</span><p>' + learnInline(command.lookFor) + '</p></div></div>';
+  if (command.output) output += '<div class="learn-output"><span>EXAMPLE OUTPUT</span><pre><code>' + esc(command.output) + '</code></pre></div>';
+  return output + '</article>';
+}
+function learnSection(section, index) {
+  let output = '<section class="learn-section" id="' + esc(section.id) + '" data-learn-section><header><span class="kicker">' + String(index + 1).padStart(2, '0') + ' / SECTION</span><h2>' + esc(section.title) + '</h2></header>';
+  if (section.paragraphs) output += section.paragraphs.map((paragraph) => '<p>' + learnInline(paragraph) + '</p>').join('');
+  if (section.bullets) output += '<ul class="learn-bullets">' + section.bullets.map((item) => '<li>' + learnInline(item) + '</li>').join('') + '</ul>';
+  if (section.checklist) output += '<ul class="learn-checklist">' + section.checklist.map((item) => '<li><span aria-hidden="true">□</span><span>' + learnInline(item) + '</span></li>').join('') + '</ul>';
+  if (section.commands) output += '<div class="learn-command-list">' + section.commands.map(learnCommandCard).join('') + '</div>';
+  if (section.callout) output += '<aside class="learn-callout ' + esc(section.callout.kind || 'info') + '"><strong>' + esc(section.callout.title) + '</strong><p>' + learnInline(section.callout.text) + '</p></aside>';
+  return output + '</section>';
+}
+function learnModuleCard(module, index) {
+  const track = learnTrack(module.track);
+  return '<a class="learn-module-card" href="/learn/' + esc(module.id) + '" data-module-card="' + esc(module.id) + '"><div class="learn-card-top"><span class="learn-index">' + String(index + 1).padStart(2, '0') + '</span><span class="learn-completion" data-module-completion>NOT STARTED</span></div><span class="kicker">' + esc(track?.title || module.track) + ' · ' + esc(module.minutes) + ' MIN</span><h3>' + esc(module.title) + '</h3><p>' + esc(module.objective) + '</p><span class="learn-card-link">OPEN MODULE <span aria-hidden="true">→</span></span></a>';
+}
+function learnTrackBlock(track) {
+  const trackModules = learnModules.filter((module) => module.track === track.id);
+  return '<section class="learn-track" id="track-' + esc(track.id) + '"><header><span class="learn-track-number">' + esc(track.number) + '</span><div><span class="kicker">LEARNING TRACK</span><h2>' + esc(track.title) + '</h2><p>' + esc(track.description) + '</p></div></header><div class="learn-track-grid">' + trackModules.map((module) => learnModuleCard(module, learnModules.indexOf(module))).join('') + '</div></section>';
+}
+function learnReferences(references) {
+  return '<section class="learn-references" id="references"><span class="kicker">PRIMARY SOURCES</span><h2>Read further</h2><p>Materi diringkas dari dokumentasi primer. Verifikasi perilaku command pada image Ubuntu/Kali yang digunakan.</p><ul>' + references.map((reference) => '<li><a href="' + esc(reference.url) + '" target="_blank" rel="noopener noreferrer">' + esc(reference.title) + '<span aria-hidden="true">↗</span></a></li>').join('') + '</ul></section>';
+}
+function learnModuleNavigation(index) {
+  const previous = learnModules[index - 1];
+  const next = learnModules[index + 1];
+  return '<nav class="learn-module-nav" aria-label="Module navigation">' + (previous ? '<a href="/learn/' + esc(previous.id) + '"><span>PREVIOUS</span><strong>← ' + esc(previous.title) + '</strong></a>' : '<a href="/learn"><span>OVERVIEW</span><strong>← Learning path</strong></a>') + (next ? '<a class="next" href="/learn/' + esc(next.id) + '"><span>NEXT</span><strong>' + esc(next.title) + ' →</strong></a>' : '<a class="next" href="/build"><span>CONTINUE</span><strong>Open Build →</strong></a>') + '</nav>';
+}
+
 app.get('/learn', requireAuth, (req, res) => {
-  let content = pageHead('LEARN / PRIVILEGE ESCALATION', 'Learn the boundary', 'Modul ringkas dengan command yang dapat langsung dicoba di target milikmu.');
-  content += '<div class="module-grid">' + modules.map((module, index) => '<a class="module-card" href="/learn/' + esc(module.id) + '"><span class="step-number">' + String(index + 1).padStart(2, '0') + '</span><h2>' + esc(module.title) + '</h2><p>' + esc(module.objective) + '</p></a>').join('') + '</div>';
+  const totalMinutes = learnModules.reduce((sum, module) => sum + module.minutes, 0);
+  let content = pageHead('LEARN / PRIVILEGE ESCALATION', 'Know the boundary', 'Materi Week 4 untuk membangun hypothesis, memvalidasi privilege boundary, dan menyusun evidence secara aman.');
+  content += '<section class="learn-overview"><div><span class="kicker">AUTHORIZED LAB ONLY</span><h2>Think in evidence,<br>not command lists.</h2><p>Ikuti learning path secara berurutan. Setiap modul menjelaskan konsep, command, cara membaca output, kesalahan umum, dan checkpoint yang harus dapat kamu jawab.</p><div class="inline-actions"><a class="button primary" href="/learn/' + esc(learnModules[0].id) + '">START MODULE 01</a><a class="button ghost" href="#curriculum">VIEW CURRICULUM</a></div></div><div class="learn-overview-stats"><div><strong>' + esc(learnModules.length) + '</strong><span>MODULES</span></div><div><strong>' + esc(learnTracks.length) + '</strong><span>TRACKS</span></div><div><strong>±' + esc(totalMinutes) + '</strong><span>MINUTES</span></div></div></section>';
+  content += '<figure class="learn-figure learn-overview-figure"><img src="/learn/pe-workflow.svg" alt="Workflow privilege escalation berbasis evidence dari scope sampai hardening." width="1200" height="340"><figcaption>Workflow yang digunakan pada seluruh modul dan challenge Week 4.</figcaption></figure>';
+  content += '<div id="curriculum" class="learn-curriculum">' + learnTracks.map(learnTrackBlock).join('') + '</div>';
+  content += '<section class="learn-source-note"><span class="kicker">RESEARCH BASIS</span><p>Disusun dari Linux man-pages, GNU manuals, sudo, systemd, WireGuard, dan MITRE ATT&amp;CK. Diagram dibuat khusus untuk LAS Week 4 dan disimpan lokal.</p></section>';
   content += assignmentBrief() + eventTimeline();
   res.send(renderPage('Learn', content, req));
 });
 app.get('/learn/:module', requireAuth, (req, res) => {
-  const module = modules.find((item) => item.id === req.params.module);
+  const module = learnModules.find((item) => item.id === req.params.module);
   if (!module) return res.status(404).send(renderPage('Not found', notice('Not found', 'Module tidak ditemukan.', 'bad'), req));
-  let content = pageHead('LEARN / ' + module.id.toUpperCase(), module.title, module.objective);
-  if (module.commands.length) content += '<section class="content-block"><h2>Commands</h2>' + module.commands.map((command) => commandBlock(command)).join('') + '</section>';
-  content += '<section class="callout"><strong>WHY IT MATTERS</strong><p>' + esc(module.note) + '</p></section><a class="button ghost" href="/learn">BACK TO MODULES</a>';
+  const index = learnModules.indexOf(module);
+  const track = learnTrack(module.track);
+  const toc = module.sections.map((section) => '<a href="#' + esc(section.id) + '" data-toc-link="' + esc(section.id) + '">' + esc(section.title) + '</a>').join('');
+  let content = '<div class="learn-reading-progress" aria-hidden="true"><span data-reading-progress></span></div>';
+  content += '<div class="learn-module-shell" data-learn-module="' + esc(module.id) + '"><aside class="learn-sidebar"><a class="learn-back" href="/learn">← ALL MODULES</a><div class="learn-sidebar-meta"><span class="learn-index">' + String(index + 1).padStart(2, '0') + '</span><div><span class="kicker">' + esc(track?.title || module.track) + '</span><strong>' + esc(module.minutes) + ' min read</strong></div></div><nav aria-label="On this page"><span>ON THIS PAGE</span>' + toc + '<a href="#mistakes">Common mistakes</a><a href="#checkpoint">Checkpoint</a><a href="#references">Sources</a></nav></aside>';
+  content += '<article class="learn-article"><header class="learn-module-hero"><span class="kicker">MODULE ' + String(index + 1).padStart(2, '0') + ' / ' + esc(track?.title || module.track) + '</span><h1>' + esc(module.title) + '</h1><p class="learn-objective">' + esc(module.objective) + '</p><p>' + esc(module.intro) + '</p><div class="learn-outcomes"><span>AFTER THIS MODULE</span><ul>' + module.outcomes.map((outcome) => '<li>' + esc(outcome) + '</li>').join('') + '</ul></div></header>';
+  if (module.diagram) content += '<figure class="learn-figure"><img src="' + esc(module.diagram.src) + '" alt="' + esc(module.diagram.alt) + '" width="1200" height="420"><figcaption>' + esc(module.diagram.caption) + '</figcaption></figure>';
+  content += module.sections.map(learnSection).join('');
+  content += '<section class="learn-section learn-mistakes" id="mistakes" data-learn-section><header><span class="kicker">PATTERN CHECK</span><h2>Common mistakes</h2></header><ul class="learn-bullets">' + module.mistakes.map((mistake) => '<li>' + esc(mistake) + '</li>').join('') + '</ul></section>';
+  content += '<section class="learn-checkpoint" id="checkpoint" data-learn-section><span class="kicker">MODULE CHECKPOINT</span><h2>' + esc(module.checkpoint.prompt) + '</h2><ol>' + module.checkpoint.tasks.map((task) => '<li>' + esc(task) + '</li>').join('') + '</ol><button class="button primary" type="button" data-mark-complete>MARK MODULE COMPLETE</button><p data-complete-status>Progress disimpan pada browser ini.</p></section>';
+  content += learnReferences(module.references) + learnModuleNavigation(index) + '</article></div>';
   res.send(renderPage(module.title, content, req));
 });
 

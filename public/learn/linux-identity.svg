@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">Linux identity and permission decision</title>
+  <desc id="desc">A process presents effective identity and groups to the kernel, which compares them with object ownership, mode bits, ACLs, and capabilities.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#6ba2ff"/></marker>
+    <style>.bg{fill:#171a1e}.box{fill:#22272d;stroke:#353b44;stroke-width:2}.accent{stroke:#6ba2ff}.line{stroke:#6ba2ff;stroke-width:2;fill:none;marker-end:url(#arrow)}.k{fill:#6ba2ff;font:700 15px monospace}.h{fill:#e7e9ec;font:700 21px Arial,sans-serif}.p{fill:#a3a9b2;font:15px Arial,sans-serif}.result{fill:#1a273b;stroke:#6ba2ff;stroke-width:2}</style>
+  </defs>
+  <rect class="bg" width="1200" height="420"/>
+  <g transform="translate(40 70)"><rect class="box accent" width="260" height="280"/><text class="k" x="22" y="36">RUNNING PROCESS</text><text class="h" x="22" y="75">Subject</text><text class="p" x="22" y="118">Real UID: who started it</text><text class="p" x="22" y="150">Effective UID: permission identity</text><text class="p" x="22" y="182">Effective GID + groups</text><text class="p" x="22" y="214">Effective capabilities</text><text class="p" x="22" y="258">Inspect: id, ps, /proc</text></g>
+  <path class="line" d="M300 210H420"/>
+  <g transform="translate(420 105)"><rect class="box" width="330" height="210"/><text class="k" x="22" y="36">KERNEL CHECK</text><text class="h" x="22" y="75">Resolve access</text><text class="p" x="22" y="118">1. Identity and groups</text><text class="p" x="22" y="150">2. Capabilities / policy</text><text class="p" x="22" y="182">3. Object access rules</text></g>
+  <path class="line" d="M750 210H870"/>
+  <g transform="translate(870 40)"><rect class="box" width="290" height="160"/><text class="k" x="22" y="36">FILESYSTEM OBJECT</text><text class="h" x="22" y="75">Owner · group · mode</text><text class="p" x="22" y="112">rwx, SUID/SGID, ACL, path</text><text class="p" x="22" y="138">and directory permissions</text></g>
+  <g transform="translate(870 230)"><rect class="result" width="290" height="150"/><text class="k" x="22" y="36">DECISION</text><text class="h" x="22" y="75">Allow or deny</text><text class="p" x="22" y="112">The effective context matters;</text><text class="p" x="22" y="136">the username alone is insufficient.</text></g>
+  <path class="line" d="M1015 200V230"/>
+</svg>

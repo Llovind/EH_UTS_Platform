@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">Evidence-led enumeration funnel</title>
+  <desc id="desc">Broad context is narrowed into anomalies, hypotheses, and a minimal safe validation.</desc>
+  <defs><style>.bg{fill:#171a1e}.layer{fill:#22272d;stroke:#353b44;stroke-width:2}.active{fill:#1a273b;stroke:#6ba2ff}.n{fill:#6ba2ff;font:700 15px monospace}.h{fill:#e7e9ec;font:700 20px Arial,sans-serif}.p{fill:#a3a9b2;font:14px Arial,sans-serif}</style></defs>
+  <rect class="bg" width="1200" height="420"/>
+  <g transform="translate(80 35)"><path class="layer" d="M0 0H1040L940 70H100Z"/><text class="n" x="120" y="28">01 · BASELINE</text><text class="h" x="120" y="55">Identity, host, kernel, network, services</text></g>
+  <g transform="translate(180 120)"><path class="layer" d="M0 0H840L750 70H90Z"/><text class="n" x="110" y="28">02 · INVENTORY</text><text class="h" x="110" y="55">Users, processes, files, delegated privilege</text></g>
+  <g transform="translate(270 205)"><path class="layer active" d="M0 0H660L570 70H90Z"/><text class="n" x="110" y="28">03 · ANOMALY</text><text class="h" x="110" y="55">Writable + privileged + reachable</text></g>
+  <g transform="translate(360 290)"><path class="layer" d="M0 0H480L405 70H75Z"/><text class="n" x="95" y="28">04 · HYPOTHESIS</text><text class="h" x="95" y="55">Predict the privilege transition</text></g>
+  <g transform="translate(465 375)"><rect class="active" width="270" height="34"/><text class="n" x="55" y="23">05 · MINIMAL PROOF</text></g>
+</svg>
