@@ -281,6 +281,15 @@ test('admin review is protected by WireGuard source and redacts flag material fr
   const loginPage = await fetch(base + '/login');
   const loginCookie = setCookies(loginPage).find((value) => value.startsWith('mbc_las_sid=')) || '';
   const loginCsrf = csrfFrom(await loginPage.text());
+  const failedLogin = await fetch(base + '/login', {
+    method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: loginCookie },
+    body: body({ _csrf: loginCsrf, caas_id: 'MBC-ADMIN', password: 'wrong-password' }),
+  });
+  const failedLoginText = await failedLogin.text();
+  assert.equal(failedLogin.status, 401);
+  assert.match(failedLoginText, /<title>Sign in · MBC LAS W4<\/title>/);
+  assert.match(failedLoginText, /The credentials are invalid\./);
+  assert.doesNotMatch(failedLoginText, /wrong-password/);
   const login = await fetch(base + '/login', {
     method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: loginCookie },
     body: body({ _csrf: loginCsrf, caas_id: 'MBC-ADMIN', password: 'A-valid-admin-password-123' }),

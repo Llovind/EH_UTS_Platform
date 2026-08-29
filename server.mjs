@@ -891,13 +891,16 @@ app.post('/register', authLimiter, requireCsrf, (req, res) => {
   }
 });
 
-app.get('/login', (req, res) => {
-  const content = pageHead('ACCOUNT / SIGN IN', 'Sign in', 'Use your CaAs ID and password.') +
+function loginForm(req, error = '', caasId = '') {
+  const message = error ? '<div class="flash bad"><strong>Sign in failed</strong><p>' + esc(error) + '</p></div>' : '';
+  return pageHead('ACCOUNT / SIGN IN', 'Sign in', 'Use your CaAs ID and password.') + message +
     '<form method="post" action="/login" class="form-card">' + csrfField(req) +
-    '<label>CaAs ID<input name="caas_id" autocomplete="username" maxlength="40" required></label>' +
+    '<label>CaAs ID<input name="caas_id" autocomplete="username" maxlength="40" required value="' + esc(caasId) + '"></label>' +
     '<label>Password<input name="password" type="password" autocomplete="current-password" required></label>' +
     formButton('SIGN IN') + '</form><p class="form-foot">Not activated yet? <a href="/register">Activate account</a></p>';
-  res.send(renderPage('Sign in', content, req));
+}
+app.get('/login', (req, res) => {
+  res.send(renderPage('Sign in', loginForm(req), req));
 });
 app.post('/login', authLimiter, requireCsrf, (req, res) => {
   const caasId = normalizeId(input(req, 'caas_id'));
@@ -905,7 +908,7 @@ app.post('/login', authLimiter, requireCsrf, (req, res) => {
   const passwordOk = Boolean(user && verifyPassword(input(req, 'password'), user.password_hash));
   if (!passwordOk) {
     logEvent(req, 'login_failed', 'user', user?.id || null);
-    return res.status(401).send(renderPage('Sign in failed', notice('Sign in failed', 'The credentials are invalid.', 'bad'), req));
+    return res.status(401).send(renderPage('Sign in', loginForm(req, 'The credentials are invalid.', caasId), req));
   }
   clearSession(req);
   req.user = { id: user.id, caasId: user.caas_id, role: user.role };
