@@ -130,6 +130,7 @@ test('runnable setup surface exposes health, public installer, and enrollment se
   assert.match(installerText, /VERIFY_TLS=\(\)/);
   assert.match(installerText, /VERIFY_RESOLVE=\(--resolve/);
   assert.match(installerText, /10\.77\.4\.1/);
+  assert.match(installerText, /\[INFO\]/);
   assert.match(installer.headers.get('content-disposition') || '', /mbc-las-w4-setup\.sh/);
   const appJs = await fetch(base + '/app.js');
   assert.equal(appJs.status, 200);
@@ -187,8 +188,11 @@ test('runnable setup surface exposes health, public installer, and enrollment se
   });
   assert.equal(tokenPage.status, 200);
   const tokenMarkup = await tokenPage.text();
-  const tokenMatch = tokenMarkup.match(/linux\.sh[^<]*--\s+([A-Za-z0-9_-]+)/);
+  const tokenMatch = tokenMarkup.match(/\/s\/([A-Za-z0-9_-]+)/);
   assert.ok(tokenMatch, 'setup page should contain one-time command token');
+  const shortInstaller = await fetch(base + '/s/' + tokenMatch[1]);
+  assert.equal(shortInstaller.status, 200);
+  assert.match(await shortInstaller.text(), /setup\/linux\.sh/);
 
   const publicKey = 'A'.repeat(42) + 'A=';
   const enrolled = await fetch(base + '/api/enroll', {

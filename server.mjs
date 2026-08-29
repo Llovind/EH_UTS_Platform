@@ -459,7 +459,7 @@ function allocatePeer(userId, type) {
 function issueEnrollmentToken(userId, type) {
   const peer = allocatePeer(userId, type);
   db.prepare('UPDATE enrollment_tokens SET used_at=COALESCE(used_at,?) WHERE peer_id=? AND used_at IS NULL').run(nowIso(), peer.id);
-  const token = randomToken(32);
+  const token = randomToken(16);
   db.prepare('INSERT INTO enrollment_tokens(token_hash,user_id,peer_id,peer_type,expires_at) VALUES(?,?,?,?,?)').run(
     sha256(token), userId, peer.id, type, enrollmentExpiry(),
   );
@@ -503,7 +503,17 @@ function peerHandshake(peer) {
 }
 function setupCommand(token) {
   const tls = cfg.production ? "--proto '=https' --tlsv1.2 " : '';
-  return 'curl -fsSL ' + tls + cfg.origin + '/setup/linux.sh | sudo bash -s -- ' + token;
+  return 'curl -fsSL ' + tls + cfg.origin + '/s/' + encodeURIComponent(token) + ' | sudo bash';
+}
+function installerBootstrap(token) {
+  const tls = cfg.production ? "--proto '=https' --tlsv1.2 " : '';
+  return [
+    '#!/usr/bin/env bash',
+    'set -Eeuo pipefail',
+    'printf "[INFO] Downloading the official MBC LAS Week 4 WireGuard installer.\\n"',
+    'curl -fsSL ' + tls + cfg.origin + '/setup/linux.sh | bash -s -- ' + shellQuote(token),
+    '',
+  ].join('\\n');
 }
 function setupPage(req, type, token = '', error = '') {
   const peer = peerForUser(req.user.id, type);
@@ -997,6 +1007,13 @@ app.get('/setup', requireAuth, (req, res) => {
 });
 app.get('/setup/linux.sh', (req, res) => {
   res.type('text/plain').set('Cache-Control', 'no-store').set('Content-Disposition', 'inline; filename="mbc-las-w4-setup.sh"').send(installerScript());
+});
+app.get('/s/:token', (req, res) => {
+  const token = String(req.params.token || '').trim();
+  if (!/^[A-Za-z0-9_-]{20,64}$/.test(token)) return res.status(404).type('text/plain').send('SETUP_LINK_INVALID');
+  const candidate = db.prepare('SELECT id FROM enrollment_tokens WHERE token_hash=? AND used_at IS NULL AND expires_at>?').get(sha256(token), nowIso());
+  if (!candidate) return res.status(404).type('text/plain').send('SETUP_LINK_INVALID');
+  res.type('text/plain').set('Cache-Control', 'no-store').set('Content-Disposition', 'inline; filename="mbc-las-w4-setup-short.sh"').send(installerBootstrap(token));
 });
 app.get('/setup/:type', requireAuth, requirePeerTypeParam, (req, res) => res.set('Cache-Control', 'no-store').send(setupPage(req, req.params.type)));
 app.post('/api/setup/:type/token', requireAuth, requireWriteAccess, requirePeerTypeParam, requireCsrf, enrollmentLimiter, (req, res) => {
