@@ -129,6 +129,9 @@ test('runnable setup surface exposes health, public installer, and enrollment se
   assert.match(installerText, /PRIVATE_KEY=/);
   assert.match(installerText, /VERIFY_TLS=\(\)/);
   assert.match(installerText, /VERIFY_RESOLVE=\(--resolve/);
+  assert.match(installerText, /systemd activation failed; trying direct wg-quick fallback/);
+  assert.match(installerText, /WG_UP_OK=0/);
+  assert.match(installerText, /wg-quick up \"\$CONFIG_PATH\"/);
   assert.match(installerText, /10\.77\.4\.1/);
   assert.match(installerText, /\[INFO\]/);
   assert.match(installer.headers.get('content-disposition') || '', /mbc-las-w4-setup\.sh/);
