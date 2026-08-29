@@ -303,6 +303,7 @@ test('admin review is protected by WireGuard source and redacts flag material fr
   assert.equal(publicAdmin.status, 403);
   const tailscaleAdmin = await fetch(base + '/admin', { headers: { cookie: adminCookie, 'x-forwarded-for': '100.83.254.54' } });
   assert.equal(tailscaleAdmin.status, 200);
+  assert.match(await tailscaleAdmin.text(), /href="\/learn"/);
   const adminPages = await Promise.all([
     fetch(base + '/admin/peers', { headers: { cookie: adminCookie } }),
     fetch(base + '/admin/health', { headers: { cookie: adminCookie } }),
