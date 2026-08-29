@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Install as root: /usr/local/sbin/mbc-las-wg-peer
+# Owner root:root, mode 0750. The portal invokes this through sudo -n.
+# Keep INTERFACE and the pool checks below in sync with the production .env.
+set -Eeuo pipefail
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+readonly INTERFACE='mbc-las-w4'
+readonly WG='/usr/bin/wg'
+
+fail() { echo "HELPER_FAILED:$1" >&2; exit 1; }
+[[ "${EUID:-0}" -eq 0 ]] || fail NOT_ROOT
+[[ -x "$WG" ]] || fail WG_UNAVAILABLE
+(( $# >= 3 && $# <= 4 )) || fail INVALID_ARGUMENTS
+
+ACTION="$1"
+PEER_TYPE="$2"
+ASSIGNED_IP="$3"
+case "$ACTION" in
+  status) (( $# == 3 )) || fail INVALID_ARGUMENTS ;;
+  add|replace|revoke) (( $# == 4 )) || fail INVALID_ARGUMENTS ;;
+  *) fail INVALID_ACTION ;;
+esac
+case "$PEER_TYPE" in attacker|target) ;; *) fail INVALID_PEER_TYPE ;; esac
+
+[[ "$ASSIGNED_IP" =~ ^10\.77\.4\.[0-9]{1,3}$ ]] || fail INVALID_ASSIGNED_IP
+OCTET="${ASSIGNED_IP##*.}"
+OCTET=$((10#$OCTET))
+if [[ "$PEER_TYPE" == attacker ]]; then
+  (( OCTET >= 10 && OCTET <= 39 )) || fail INVALID_ASSIGNED_IP
+else
+  (( OCTET >= 100 && OCTET <= 129 )) || fail INVALID_ASSIGNED_IP
+fi
+
+if [[ "$ACTION" != status ]]; then
+  PUBLIC_KEY="$4"
+  [[ "$PUBLIC_KEY" =~ ^[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=$ ]] || fail INVALID_PUBLIC_KEY
+fi
+
+case "$ACTION" in
+  status)
+    exec "$WG" show "$INTERFACE" dump
+    ;;
+  add|replace)
+    exec "$WG" set "$INTERFACE" peer "$PUBLIC_KEY" allowed-ips "$ASSIGNED_IP/32"
+    ;;
+  revoke)
+    exec "$WG" set "$INTERFACE" peer "$PUBLIC_KEY" remove
+    ;;
+esac

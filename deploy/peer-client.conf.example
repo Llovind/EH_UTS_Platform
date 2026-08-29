@@ -1,0 +1,10 @@
+# One peer profile per attacker laptop or target VM. The mentor should generate a unique key pair per peer.
+[Interface]
+PrivateKey = PEER_PRIVATE_KEY
+Address = 10.77.4.10/32
+
+[Peer]
+PublicKey = HUB_PUBLIC_KEY
+Endpoint = portal.example.org:51820
+AllowedIPs = 10.77.4.0/24
+PersistentKeepalive = 25

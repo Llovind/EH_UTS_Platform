@@ -1,0 +1,13 @@
+# Template only. Replace all private/public key placeholders and confirm routes on the VPS.
+# Hub address: 10.77.4.1/24. Target peers: 10.77.4.100-129. Attacker peers: 10.77.4.10-39.
+[Interface]
+Address = 10.77.4.1/24
+ListenPort = 51820
+PrivateKey = HUB_PRIVATE_KEY
+PostUp = sysctl -w net.ipv4.ip_forward=1
+PostDown = sysctl -w net.ipv4.ip_forward=0
+
+# Add one [Peer] block per CaAs attacker or target VM. Keep each AllowedIPs unique.
+# [Peer]
+# PublicKey = PEER_PUBLIC_KEY
+# AllowedIPs = 10.77.4.100/32

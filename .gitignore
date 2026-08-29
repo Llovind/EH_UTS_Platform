@@ -1,0 +1,11 @@
+node_modules/
+.env
+data/*.db
+data/*.db-*
+logs/
+*.log
+output/playwright/
+tmp-browser-data/
+.playwright-cli/
+invites*.csv
+caas-ids*.txt

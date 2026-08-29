@@ -1,0 +1,28 @@
+# Replace portal.example.org with the chosen portal subdomain before deployment.
+# The target VMs and WireGuard hub are never proxied through this site block.
+portal.example.org {
+    encode zstd gzip
+    # Defense in depth: Caddy rejects public requests before they reach the app's admin middleware.
+    @admin path /admin*
+    @internal_verify path /internal/verify
+    @wireguard remote_ip 10.77.4.0/24
+    handle @admin {
+        handle @wireguard {
+            reverse_proxy 127.0.0.1:3000
+        }
+        respond "Private route" 403
+    }
+    handle @internal_verify {
+        handle @wireguard {
+            reverse_proxy 127.0.0.1:3000
+        }
+        respond "WireGuard only" 403
+    }
+    handle {
+        reverse_proxy 127.0.0.1:3000
+    }
+    header {
+        # Do not advertise the app server.
+        -Server
+    }
+}

@@ -1,0 +1,14 @@
+# Install as /etc/sudoers.d/mbc-las-wg-peer after replacing the service user.
+# The helper performs the second, strict validation of action, peer type, IP,
+# and public key. Do not grant the portal user direct access to wg, wg-quick,
+# a shell, or arbitrary command strings.
+Cmnd_Alias MBC_LAS_WG_HELPER = \
+  /usr/local/sbin/mbc-las-wg-peer add attacker *, \
+  /usr/local/sbin/mbc-las-wg-peer add target *, \
+  /usr/local/sbin/mbc-las-wg-peer replace attacker *, \
+  /usr/local/sbin/mbc-las-wg-peer replace target *, \
+  /usr/local/sbin/mbc-las-wg-peer revoke attacker *, \
+  /usr/local/sbin/mbc-las-wg-peer revoke target *, \
+  /usr/local/sbin/mbc-las-wg-peer status attacker *, \
+  /usr/local/sbin/mbc-las-wg-peer status target *
+mbc-portal ALL=(root) NOPASSWD: MBC_LAS_WG_HELPER
