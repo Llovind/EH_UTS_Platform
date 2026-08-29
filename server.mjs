@@ -371,7 +371,7 @@ function requireCurrentPassword(req, res, next) {
   const password = String(req.body?.current_password || '');
   const user = db.prepare('SELECT password_hash FROM users WHERE id=? AND active=1').get(req.user.id);
   if (!password || !user || !verifyPassword(password, user.password_hash)) {
-    return res.status(403).send(renderPage('Confirmation required', notice('Confirmation required', 'Password akun tidak valid.', 'bad'), req));
+    return res.status(403).send(renderPage('Confirmation required', notice('Confirmation required', 'The account password is incorrect.', 'bad'), req));
   }
   next();
 }
@@ -413,9 +413,9 @@ function renderPage(title, content, req) {
       (user.role === 'admin' ? '<a href="/admin">Admin</a>' : '') +
       '<form class="nav-form" method="post" action="/logout">' + csrfField(req) + '<button type="submit">Sign out</button></form>'
     : '<a href="/scoreboard">Scoreboard</a><a class="nav-cta" href="/login">Sign in</a>';
-  return '<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="MBC LAS Week 4 portal"><title>' +
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="MBC LAS Week 4 portal"><title>' +
     esc(title) + ' · MBC LAS W4</title><link rel="icon" href="/logo.png"><link rel="stylesheet" href="/styles.css"><script src="/app.js" defer></script></head><body><header class="site-header"><a class="brand" href="/"><img src="/logo.png" alt="MBC Laboratory"><span>LAS / WEEK 04</span></a><nav>' +
-    nav + '</nav></header><main class="shell">' + content + '</main><footer class="site-footer"><span>MBC LABORATORY · DIVISI CYBER SECURITY</span><span>AUTHORIZED TRAINING NETWORK · ' + esc(cfg.wgCidr) + '</span></footer></body></html>';
+    nav + '</nav></header><main class="shell">' + content + '</main><footer class="site-footer"><span>MBC LABORATORY · CYBER SECURITY DIVISION</span><span>AUTHORIZED TRAINING NETWORK · ' + esc(cfg.wgCidr) + '</span></footer></body></html>';
 }
 function pageHead(kicker, title, subtitle = '') {
   return '<section class="page-head"><div><span class="kicker">' + esc(kicker) + '</span><h1>' + esc(title) + '</h1>' + (subtitle ? '<p class="muted">' + esc(subtitle) + '</p>' : '') + '</div></section>';
@@ -501,23 +501,23 @@ function setupPage(req, type, token = '', error = '') {
   const peer = peerForUser(req.user.id, type);
   const locked = type === 'target' && peerForUser(req.user.id, 'attacker')?.status !== 'connected';
   const title = type === 'attacker' ? 'Setup attacker' : 'Setup target';
-  const osText = type === 'attacker' ? 'Kali Linux VM atau Kali Linux WSL' : 'Ubuntu target VM atau VPS';
+  const osText = type === 'attacker' ? 'Kali Linux VM or Kali Linux WSL' : 'Ubuntu target VM or VPS';
   const initialStatus = locked ? 'locked' : peer?.status || 'not_started';
   let body = pageHead('SETUP / ' + type.toUpperCase(), title, osText);
   body += '<div class="notice compact" data-setup-status data-peer-type="' + esc(type) + '" data-status="' + esc(initialStatus) + '"><strong data-status-value>' + (locked ? 'LOCKED' : peer?.status === 'connected' ? 'CONNECTED' : 'NOT CONNECTED') + '</strong><p>' +
-    (locked ? 'Selesaikan setup attacker terlebih dahulu.' : 'Satu peer ' + type + ' digunakan untuk akun ini.') + '</p><small>IP: <code data-status-ip>' + esc(peer?.assigned_ip || 'NOT ASSIGNED') + '</code> · Last verified: <span data-status-verified>' + esc(peer?.last_verified_at || 'NOT VERIFIED') + '</span></small></div>';
+    (locked ? 'Complete attacker setup first.' : 'One ' + type + ' peer is assigned to this account.') + '</p><small>IP: <code data-status-ip>' + esc(peer?.assigned_ip || 'NOT ASSIGNED') + '</code> · Last verified: <span data-status-verified>' + esc(peer?.last_verified_at || 'NOT VERIFIED') + '</span></small></div>';
   if (error) body += '<div class="flash bad">' + esc(error) + '</div>';
   if (!locked) {
-    body += '<section class="step-panel"><div class="step-number">01</div><div><h2>Generate setup command</h2><p class="muted">Token berlaku 10 menit dan hanya dapat dipakai sekali.</p><form method="post" action="/api/setup/' + type + '/token">' + csrfField(req) + formButton('GENERATE COMMAND') + '</form></div></section>';
+    body += '<section class="step-panel"><div class="step-number">01</div><div><h2>Generate setup command</h2><p class="muted">The token expires in 10 minutes and can be used only once.</p><form method="post" action="/api/setup/' + type + '/token">' + csrfField(req) + formButton('GENERATE COMMAND') + '</form></div></section>';
     if (token) {
       body += '<section class="step-panel"><div class="step-number">02</div><div><h2>Run in ' + esc(type === 'attacker' ? 'Kali' : 'Ubuntu') + '</h2>' + commandBlock(setupCommand(token)) +
-        '<p class="muted">Private key dibuat di mesin lokal. Jangan kirim output command atau file konfigurasi ke siapa pun.</p></div></section>';
+        '<p class="muted">The private key is created on your local machine. Never share command output or the configuration file.</p></div></section>';
     } else {
-      body += '<section class="step-panel is-locked"><div class="step-number">02</div><div><h2>Run setup command</h2><p class="muted">Generate command pada langkah 01 untuk membuka installer sekali pakai.</p></div></section>';
+      body += '<section class="step-panel is-locked"><div class="step-number">02</div><div><h2>Run setup command</h2><p class="muted">Generate the command in step 01 to unlock the one-time installer.</p></div></section>';
     }
-    body += '<section class="step-panel"><div class="step-number">03</div><div><h2>Verify</h2><p class="muted">Status diperbarui otomatis setelah script menyelesaikan verifikasi internal.</p><a class="button ghost" href="/setup/' + type + '">CHECK STATUS</a></div></section>';
+    body += '<section class="step-panel"><div class="step-number">03</div><div><h2>Verify</h2><p class="muted">Status updates automatically after the script completes internal verification.</p><a class="button ghost" href="/setup/' + type + '">CHECK STATUS</a></div></section>';
     if (peer) {
-      body += '<section class="step-panel"><div class="step-number">04</div><div><h2>Peer controls</h2><p class="muted">Revoke atau regenerate memutus peer lama. Konfirmasi dengan password akun.</p>' +
+      body += '<section class="step-panel"><div class="step-number">04</div><div><h2>Peer controls</h2><p class="muted">Revoke or regenerate to disconnect the old peer. Confirm with your account password.</p>' +
         '<form method="post" action="/api/setup/' + type + '/revoke" class="inline-form"><input name="current_password" type="password" autocomplete="current-password" placeholder="Account password" required>' + csrfField(req) + formButton('REVOKE PEER', 'danger') + '</form>' +
         '<form method="post" action="/api/setup/' + type + '/regenerate" class="inline-form"><input name="current_password" type="password" autocomplete="current-password" placeholder="Account password" required>' + csrfField(req) + formButton('REGENERATE PEER', 'ghost') + '</form></div></section>';
     }
@@ -690,23 +690,23 @@ function builderValues(req, challenge = null) {
 }
 function validateBuilder(values, peer) {
   const errors = [];
-  if (!peer || peer.peer_type !== 'target' || peer.status !== 'connected') errors.push('Target peer harus connected terlebih dahulu.');
-  if (values.title.length < 3 || values.title.length > 100) errors.push('Judul harus 3-100 karakter.');
-  if (values.description.length < 20 || values.description.length > 1200) errors.push('Deskripsi harus 20-1200 karakter.');
-  if (values.learning_objective.length < 10 || values.learning_objective.length > 300) errors.push('Learning objective harus 10-300 karakter.');
-  if (values.initial_hint.length < 5 || values.initial_hint.length > 400) errors.push('Initial hint harus 5-400 karakter.');
-  if (values.initial_foothold_summary.length < 5 || values.enumeration_clue.length < 5 || values.pe_technique.length < 3 || values.intended_path.length < 10 || values.flag_location_summary.length < 5) errors.push('Semua field intended path wajib diisi untuk mentor review.');
-  if (!validFlag(values.flag)) errors.push('Flag harus menggunakan format MBC{...} yang case-sensitive.');
-  if (values.services.length < 3) errors.push('Minimal tiga service harus dicantumkan.');
+  if (!peer || peer.peer_type !== 'target' || peer.status !== 'connected') errors.push('The target peer must be connected first.');
+  if (values.title.length < 3 || values.title.length > 100) errors.push('The title must be 3-100 characters.');
+  if (values.description.length < 20 || values.description.length > 1200) errors.push('The description must be 20-1200 characters.');
+  if (values.learning_objective.length < 10 || values.learning_objective.length > 300) errors.push('The learning objective must be 10-300 characters.');
+  if (values.initial_hint.length < 5 || values.initial_hint.length > 400) errors.push('The initial hint must be 5-400 characters.');
+  if (values.initial_foothold_summary.length < 5 || values.enumeration_clue.length < 5 || values.pe_technique.length < 3 || values.intended_path.length < 10 || values.flag_location_summary.length < 5) errors.push('Complete every intended-path field for mentor review.');
+  if (!validFlag(values.flag)) errors.push('The flag must use the case-sensitive MBC{...} format.');
+  if (values.services.length < 3) errors.push('List at least three services.');
   const seen = new Set();
   for (const service of values.services) {
     const port = Number(service.port);
-    if (!Number.isInteger(port) || port < 1 || port > 65535) errors.push('Setiap port harus berupa angka 1-65535.');
-    if (!['tcp', 'udp'].includes(service.protocol)) errors.push('Protocol hanya boleh tcp atau udp.');
-    if (service.label.length < 2 || service.label.length > 80) errors.push('Label service harus 2-80 karakter.');
-    if (service.note.length > 160) errors.push('Catatan service maksimal 160 karakter.');
+    if (!Number.isInteger(port) || port < 1 || port > 65535) errors.push('Each port must be a number from 1 to 65535.');
+    if (!['tcp', 'udp'].includes(service.protocol)) errors.push('Protocol must be tcp or udp.');
+    if (service.label.length < 2 || service.label.length > 80) errors.push('Service labels must be 2-80 characters.');
+    if (service.note.length > 160) errors.push('Service notes must be 160 characters or fewer.');
     const key = service.port + '/' + service.protocol;
-    if (seen.has(key)) errors.push('Port/protocol tidak boleh duplikat.');
+    if (seen.has(key)) errors.push('Port/protocol combinations must be unique.');
     seen.add(key);
   }
   return errors;
@@ -714,26 +714,26 @@ function validateBuilder(values, peer) {
 function builderForm(req, values = {}, errors = [], result = null) {
   const peer = peerForUser(req.user.id, 'target');
   const services = values.services?.length ? values.services : [{ port: '', protocol: 'tcp', label: '', note: '' }, { port: '', protocol: 'tcp', label: '', note: '' }, { port: '', protocol: 'tcp', label: '', note: '' }];
-  let body = pageHead('BUILD / CHALLENGE', 'Build your lab', 'Isi langsung di portal. Owner ID dan target peer diambil dari akun.');
+  let body = pageHead('BUILD / CHALLENGE', 'Build your lab', 'Complete the form in the portal. Your owner ID and target peer are linked automatically.');
   body += '<div class="builder-meta"><span>TARGET PEER</span><strong>' + esc(peer?.assigned_ip || 'NOT ASSIGNED') + '</strong>' + statusBadge(peer?.status || 'not_started') + '</div>';
-  if (errors.length) body += '<div class="flash bad"><strong>Periksa:</strong><ul>' + errors.map((error) => '<li>' + esc(error) + '</li>').join('') + '</ul></div>';
+  if (errors.length) body += '<div class="flash bad"><strong>Review these items:</strong><ul>' + errors.map((error) => '<li>' + esc(error) + '</li>').join('') + '</ul></div>';
   if (result) body += '<div class="flash ' + (result.ok ? 'good' : 'bad') + '"><strong>' + esc(result.title) + '</strong><ul>' + result.items.map((item) => '<li>' + esc(item) + '</li>').join('') + '</ul></div>';
   body += '<form method="post" action="/build/challenge/save" class="builder-form">' + csrfField(req) +
     '<fieldset><legend>01 / LAB IDENTITY</legend><label>Challenge title<input name="title" maxlength="100" required value="' + esc(values.title) + '" placeholder="The Quiet Backup"></label><label>Player-facing description<textarea name="description" maxlength="1200" required>' + esc(values.description) + '</textarea><label>Learning objective<input name="learning_objective" maxlength="300" required value="' + esc(values.learning_objective) + '" placeholder="Practice SUID enumeration and evidence capture."></label></fieldset>' +
-    '<fieldset><legend>02 / SERVICES</legend><p class="muted">Minimal tiga service. Port target dipakai hanya untuk Light Check dan command contoh.</p><div class="service-list">';
+    '<fieldset><legend>02 / SERVICES</legend><p class="muted">List at least three services. Target ports are used for Light Check and example commands.</p><div class="service-list">';
   services.forEach((service) => {
     body += '<div class="service-row"><input name="service_port" inputmode="numeric" maxlength="5" value="' + esc(service.port) + '" placeholder="22"><select name="service_protocol"><option value="tcp"' + (service.protocol === 'tcp' ? ' selected' : '') + '>TCP</option><option value="udp"' + (service.protocol === 'udp' ? ' selected' : '') + '>UDP</option></select><input name="service_label" maxlength="80" value="' + esc(service.label) + '" placeholder="SSH"><input name="service_note" maxlength="160" value="' + esc(service.note) + '" placeholder="Clue/service purpose"></div>';
   });
   body += '</div></fieldset>' +
     '<fieldset><legend>03 / INTENDED PATH <span class="legend-note">MENTOR ONLY</span></legend><label>Initial foothold summary<textarea name="initial_foothold_summary" maxlength="700" required>' + esc(values.initial_foothold_summary) + '</textarea></label><label>Enumeration clue<textarea name="enumeration_clue" maxlength="700" required>' + esc(values.enumeration_clue) + '</textarea></label><label>Privilege-escalation technique<input name="pe_technique" maxlength="200" required value="' + esc(values.pe_technique) + '" placeholder="SUID / sudo / cron"></label><label>Intended path<textarea name="intended_path" maxlength="1400" required>' + esc(values.intended_path) + '</textarea></label><label>Flag location summary<textarea name="flag_location_summary" maxlength="500" required>' + esc(values.flag_location_summary) + '</textarea></label></fieldset>' +
-    '<fieldset><legend>04 / PLAYER VIEW</legend><label>Initial hint<input name="initial_hint" maxlength="400" required value="' + esc(values.initial_hint) + '" placeholder="Start with the service banner."></label><p class="muted">Jangan menaruh solver identity atau solusi di player-facing text.</p></fieldset>' +
-    '<fieldset><legend>05 / FLAG</legend><label>Flag<input name="flag" maxlength="120" required value="' + esc(values.flag) + '" placeholder="MBC{...}"></label><p class="muted">Flag disimpan terenkripsi dan tidak dikirim ke halaman pemain lain.</p></fieldset>' +
+    '<fieldset><legend>04 / PLAYER VIEW</legend><label>Initial hint<input name="initial_hint" maxlength="400" required value="' + esc(values.initial_hint) + '" placeholder="Start with the service banner."></label><p class="muted">Do not include solver identity or solution details in player-facing text.</p></fieldset>' +
+    '<fieldset><legend>05 / FLAG</legend><label>Flag<input name="flag" maxlength="120" required value="' + esc(values.flag) + '" placeholder="MBC{...}"></label><p class="muted">The flag is encrypted at rest and never shown to other players.</p></fieldset>' +
     '<div class="form-actions">' + formButton('SAVE DRAFT') + '<button class="button ghost" type="submit" formaction="/build/challenge/check">RUN LIGHT CHECK</button><button class="button primary" type="submit" formaction="/build/challenge/submit">SUBMIT FOR REVIEW</button><a class="button ghost" href="/build/challenge/preview">PLAYER PREVIEW</a></div></form>';
   return renderPage('Build your lab', body, req);
 }
 function playerPreview(req, challenge, peer) {
   const services = parseStoredServices(challenge.services);
-  let body = pageHead('BUILD / PLAYER PREVIEW', challenge.title, 'Preview hanya menampilkan informasi yang akan terlihat oleh solver.');
+  let body = pageHead('BUILD / PLAYER PREVIEW', challenge.title, 'This preview shows only what solvers will see.');
   body += '<div class="target-banner"><span class="kicker">TARGET IP</span><strong>' + esc(peer.assigned_ip) + '</strong><span class="status ' + esc(challenge.health_status) + '">' + esc(challenge.health_status) + '</span></div>';
   body += '<section class="card"><h2>Services</h2><div class="service-table">' + services.map((service) => '<div><code>' + esc(service.port + '/' + service.protocol) + '</code><strong>' + esc(service.label) + '</strong><span>' + esc(service.note || '') + '</span></div>').join('') + '</div></section>';
   body += '<section class="card"><h2>Challenge</h2><p>' + nl2br(challenge.description) + '</p><details><summary>INITIAL HINT</summary><p>' + nl2br(challenge.initial_hint) + '</p></details></section>';
@@ -768,13 +768,13 @@ function saveChallenge(req, values) {
 }
 async function runLightCheck(challenge, peer) {
   const failures = [];
-  if (!peer || peer.status !== 'connected') failures.push('Target peer harus connected terlebih dahulu.');
-  if (!peer || Number(challenge.target_peer_id) !== Number(peer.id) || Number(challenge.owner_user_id) !== Number(peer.user_id)) failures.push('Challenge ownership dan target peer tidak cocok.');
-  if (!isInCidr(challenge.target_ip, cfg.wgCidr) || !ipv4InRange(challenge.target_ip, cfg.targetStart, cfg.targetEnd)) failures.push('Target IP berada di luar target pool.');
+  if (!peer || peer.status !== 'connected') failures.push('The target peer must be connected first.');
+  if (!peer || Number(challenge.target_peer_id) !== Number(peer.id) || Number(challenge.owner_user_id) !== Number(peer.user_id)) failures.push('Challenge ownership and target peer do not match.');
+  if (!isInCidr(challenge.target_ip, cfg.wgCidr) || !ipv4InRange(challenge.target_ip, cfg.targetStart, cfg.targetEnd)) failures.push('The target IP is outside the target pool.');
   const probe = await probeTargetIp(challenge.target_ip);
-  if (!probe.ok) failures.push('Target IP tidak reachable: ' + probe.detail + '.');
+  if (!probe.ok) failures.push('The target IP is unreachable: ' + probe.detail + '.');
   const services = parseStoredServices(challenge.services);
-  if (services.length < 3) failures.push('Minimal tiga service wajib ada.');
+  if (services.length < 3) failures.push('At least three services are required.');
   const result = { ok: failures.length === 0, failures, probe };
   db.prepare('INSERT INTO connectivity_checks(peer_id,challenge_id,check_type,status,observed_ip,detail_code) VALUES(?,?,?,?,?,?)').run(peer?.id || null, challenge.id, 'light_check', result.ok ? 'pass' : 'fail', challenge.target_ip, probe.detail);
   if (result.ok) {
@@ -853,16 +853,16 @@ if (!existingAdmin) {
 app.get('/', (req, res) => {
   const phase = currentPhase();
   const count = db.prepare("SELECT COUNT(*) AS count FROM challenges WHERE status='approved' AND health_status<>'disabled'").get().count;
-  const content = '<section class="hero-compact"><span class="kicker">MBC LABORATORY / CYBER SECURITY</span><h1>LAS WEEK 04<br><em>BUILD. FIND. PROVE.</em></h1><p>Portal operasional untuk setup WireGuard, membangun lab, dan mencoba challenge antar CaAs.</p><div class="hero-actions"><a class="button primary" href="' + (req.user ? '/workspace' : '/login') + '">' + (req.user ? 'OPEN WORKSPACE' : 'SIGN IN') + '</a><a class="button ghost" href="/scoreboard">SCOREBOARD</a></div><div class="hero-meta"><span><strong>' + esc(phase) + '</strong><small>EVENT STATE</small></span><span><strong>' + esc(count) + '</strong><small>APPROVED LABS</small></span><span><strong>' + esc(cfg.wgCidr) + '</strong><small>PRIVATE TARGET NETWORK</small></span></div></section>';
+  const content = '<section class="hero-compact"><span class="kicker">MBC LABORATORY / CYBER SECURITY</span><h1>LAS WEEK 04<br><em>BUILD. FIND. PROVE.</em></h1><p>Operational portal for WireGuard setup, lab creation, and peer-to-peer challenge testing.</p><div class="hero-actions"><a class="button primary" href="' + (req.user ? '/workspace' : '/login') + '">' + (req.user ? 'OPEN WORKSPACE' : 'SIGN IN') + '</a><a class="button ghost" href="/scoreboard">SCOREBOARD</a></div><div class="hero-meta"><span><strong>' + esc(phase) + '</strong><small>EVENT STATE</small></span><span><strong>' + esc(count) + '</strong><small>APPROVED LABS</small></span><span><strong>' + esc(cfg.wgCidr) + '</strong><small>PRIVATE TARGET NETWORK</small></span></div></section>';
   res.send(renderPage('LAS Week 4', content, req));
 });
 
 app.get('/register', (req, res) => {
-  const content = pageHead('ACCOUNT / ACTIVATE', 'Activate account', 'Gunakan CaAs ID dan one-time activation code dari mentor.') +
+  const content = pageHead('ACCOUNT / ACTIVATE', 'Activate account', 'Use your CaAs ID and the one-time activation code issued by your mentor.') +
     '<form method="post" action="/register" class="form-card">' + csrfField(req) +
     '<label>CaAs ID<input name="caas_id" autocomplete="username" maxlength="40" required placeholder="CAAS-001"></label>' +
     '<label>Activation code<input name="activation_code" autocomplete="one-time-code" maxlength="100" required></label>' +
-    '<label>Password<input name="password" type="password" autocomplete="new-password" minlength="12" required><small>Minimal 12 karakter.</small></label>' +
+    '<label>Password<input name="password" type="password" autocomplete="new-password" minlength="12" required><small>Minimum 12 characters.</small></label>' +
     '<label>Confirm password<input name="password_confirm" type="password" autocomplete="new-password" minlength="12" required></label>' +
     formButton('ACTIVATE ACCOUNT') + '</form>';
   res.send(renderPage('Activate account', content, req));
@@ -872,10 +872,10 @@ app.post('/register', authLimiter, requireCsrf, (req, res) => {
   const password = input(req, 'password');
   const code = input(req, 'activation_code');
   if (!/^[A-Z0-9][A-Z0-9_-]{2,39}$/.test(caasId) || !isStrongPassword(password) || password !== input(req, 'password_confirm')) {
-    return res.status(400).send(renderPage('Activation failed', notice('Activation failed', 'Periksa ID, password minimal 12 karakter, dan konfirmasi password.', 'bad'), req));
+    return res.status(400).send(renderPage('Activation failed', notice('Activation failed', 'Check the ID, use a password of at least 12 characters, and confirm it correctly.', 'bad'), req));
   }
   const invite = db.prepare('SELECT * FROM invites WHERE caas_id=? AND used_at IS NULL AND expires_at>?').get(caasId, nowIso());
-  if (!invite || !sameHash(invite.code_hash, sha256(code))) return res.status(400).send(renderPage('Activation failed', notice('Activation failed', 'ID atau activation code tidak valid, expired, atau sudah dipakai.', 'bad'), req));
+  if (!invite || !sameHash(invite.code_hash, sha256(code))) return res.status(400).send(renderPage('Activation failed', notice('Activation failed', 'The ID or activation code is invalid, expired, or already used.', 'bad'), req));
   try {
     const userId = withTransaction(() => {
       const info = db.prepare("INSERT INTO users(caas_id,password_hash,role) VALUES(?,?, 'participant')").run(caasId, hashPassword(password));
@@ -888,17 +888,17 @@ app.post('/register', authLimiter, requireCsrf, (req, res) => {
     logEvent(req, 'account_activated', 'user', userId);
     res.redirect('/workspace');
   } catch {
-    res.status(400).send(renderPage('Activation failed', notice('Activation failed', 'CaAs ID sudah aktif. Hubungi mentor.', 'bad'), req));
+    res.status(400).send(renderPage('Activation failed', notice('Activation failed', 'This CaAs ID is already active. Contact your mentor.', 'bad'), req));
   }
 });
 
 app.get('/login', (req, res) => {
-  const content = pageHead('ACCOUNT / SIGN IN', 'Sign in', 'Masuk menggunakan CaAs ID dan password.') +
+  const content = pageHead('ACCOUNT / SIGN IN', 'Sign in', 'Use your CaAs ID and password.') +
     '<form method="post" action="/login" class="form-card">' + csrfField(req) +
     '<label>CaAs ID<input name="caas_id" autocomplete="username" maxlength="40" required></label>' +
     '<label>Password<input name="password" type="password" autocomplete="current-password" required></label>' +
-    '<label>Admin TOTP <small>admin only</small><input name="totp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 digits"></label>' +
-    formButton('SIGN IN') + '</form><p class="form-foot">Belum aktivasi? <a href="/register">Activate account</a></p>';
+    '<label>Admin TOTP <small>Admin accounts</small><input name="totp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6-digit code"><small>Enter the current code from your authenticator app.</small></label>' +
+    formButton('SIGN IN') + '</form><p class="form-foot">Not activated yet? <a href="/register">Activate account</a></p>';
   res.send(renderPage('Sign in', content, req));
 });
 app.post('/login', authLimiter, requireCsrf, (req, res) => {
@@ -908,7 +908,7 @@ app.post('/login', authLimiter, requireCsrf, (req, res) => {
   const totpOk = user?.role === 'admin' ? verifyTotp(input(req, 'totp'), cfg.adminTotp) : true;
   if (!passwordOk || !totpOk) {
     logEvent(req, 'login_failed', 'user', user?.id || null);
-    return res.status(401).send(renderPage('Sign in failed', notice('Sign in failed', 'Credential atau second factor tidak valid.', 'bad'), req));
+    return res.status(401).send(renderPage('Sign in failed', notice('Sign in failed', 'The credentials or second factor are invalid.', 'bad'), req));
   }
   clearSession(req);
   req.user = { id: user.id, caasId: user.caas_id, role: user.role };
@@ -933,16 +933,16 @@ function workspace(req, res) {
   const buildState = challenge?.status || (targetReady ? 'not_started' : 'locked');
   const labState = phase === 'LIVE' || phase === 'LOCKED' ? phase.toLowerCase() : 'closed';
   const score = scoreForSolved(db.prepare('SELECT * FROM submissions WHERE user_id=? AND correct=1').all(req.user.id));
-  let content = pageHead('WORKSPACE / ' + req.user.caasId, 'Next action', 'Selesaikan langkah dari atas ke bawah.');
+  let content = pageHead('WORKSPACE / ' + req.user.caasId, 'Next action', 'Complete the steps from top to bottom.');
   content += '<div class="stats">' + stat('Event', phase, 'WIB schedule') + stat('Your score', String(score.points), score.solved + ' solved') + stat('Own lab', challenge?.status || 'not started', 'owner ID admin-only') + '</div>';
   content += '<section class="step-list">' +
-    stepCard('01', 'SETUP ATTACKER', status.attacker?.status || 'not_started', 'Kali VM atau Kali WSL. Tunnel untuk menguji lab peer.', '/setup/attacker') +
-    stepCard('02', 'SETUP TARGET', status.target?.status || (status.attacker?.status === 'connected' ? 'not_started' : 'locked'), 'Ubuntu target. Buat lab sendiri setelah tunnel aktif.', status.attacker?.status === 'connected' ? '/setup/target' : '') +
-    stepCard('03', 'BUILD YOUR LAB', buildState, 'Isi challenge langsung di portal lalu jalankan Light Check.', targetReady ? '/build' : '') +
-    stepCard('04', 'LAB SPACE', labState, 'Buka lab peer, gunakan command yang tersedia, submit flag.', phase === 'LIVE' || phase === 'LOCKED' ? '/lab-space' : '') +
+    stepCard('01', 'SETUP ATTACKER', status.attacker?.status || 'not_started', 'Kali VM or Kali WSL. Use the tunnel to test peer labs.', '/setup/attacker') +
+    stepCard('02', 'SETUP TARGET', status.target?.status || (status.attacker?.status === 'connected' ? 'not_started' : 'locked'), 'Ubuntu target. Build your lab after the tunnel is active.', status.attacker?.status === 'connected' ? '/setup/target' : '') +
+    stepCard('03', 'BUILD YOUR LAB', buildState, 'Create the challenge in the portal, then run Light Check.', targetReady ? '/build' : '') +
+    stepCard('04', 'LAB SPACE', labState, 'Open peer labs, use the available commands, and submit flags.', phase === 'LIVE' || phase === 'LOCKED' ? '/lab-space' : '') +
     '</section>';
   content += '<div class="inline-actions"><a class="button ghost small" href="/learn">OPEN LEARN MODULES</a></div>';
-  content += '<section class="timeline"><span class="kicker">SCHEDULE</span><div><strong>BUILD</strong><span>hingga ' + esc(formatWhen(cfg.buildDeadlineAt)) + '</span></div><div><strong>LIVE</strong><span>' + esc(formatWhen(cfg.portalOpenAt)) + '</span></div><div><strong>LOCK</strong><span>' + esc(formatWhen(cfg.gameLockAt)) + '</span></div></section>';
+  content += '<section class="timeline"><span class="kicker">SCHEDULE</span><div><strong>BUILD</strong><span>Until ' + esc(formatWhen(cfg.buildDeadlineAt)) + '</span></div><div><strong>LIVE</strong><span>' + esc(formatWhen(cfg.portalOpenAt)) + '</span></div><div><strong>LOCK</strong><span>' + esc(formatWhen(cfg.gameLockAt)) + '</span></div></section>';
   res.send(renderPage('Workspace', content, req));
 }
 app.get('/workspace', requireAuth, workspace);
@@ -950,11 +950,11 @@ app.get('/dashboard', requireAuth, (req, res) => res.redirect('/workspace'));
 
 app.get('/setup', requireAuth, (req, res) => {
   const status = setupStatus(req.user.id);
-  const content = pageHead('SETUP / WIREGUARD', 'Connect the lab network', 'Satu attacker peer dan satu target peer per CaAs.') +
+  const content = pageHead('SETUP / WIREGUARD', 'Connect the lab network', 'One attacker peer and one target peer are assigned to each CaAs account.') +
     '<div class="step-list">' +
-    stepCard('01', 'ATTACKER', status.attacker?.status || 'not_started', 'Kali VM atau Kali WSL.', '/setup/attacker') +
-    stepCard('02', 'TARGET', status.target?.status || 'not_started', 'Ubuntu VM atau VPS optional.', status.attacker?.status === 'connected' ? '/setup/target' : '') +
-    '</div><section class="callout"><strong>NETWORK RULE</strong><p>Portal boleh public. Target IP hanya dapat diakses melalui WireGuard.</p></section>';
+    stepCard('01', 'ATTACKER', status.attacker?.status || 'not_started', 'Kali VM or Kali WSL.', '/setup/attacker') +
+    stepCard('02', 'TARGET', status.target?.status || 'not_started', 'Ubuntu VM or optional VPS.', status.attacker?.status === 'connected' ? '/setup/target' : '') +
+    '</div><section class="callout"><strong>NETWORK RULE</strong><p>The portal may be public. Target IPs are reachable only through WireGuard.</p></section>';
   res.send(renderPage('Setup', content, req));
 });
 app.get('/setup/linux.sh', (req, res) => {
@@ -964,7 +964,7 @@ app.get('/setup/:type', requireAuth, requirePeerTypeParam, (req, res) => res.set
 app.post('/api/setup/:type/token', requireAuth, requirePeerTypeParam, requireCsrf, enrollmentLimiter, (req, res) => {
   const type = req.params.type;
   if (currentPhase() === 'LOCKED') return res.status(403).send(phaseError(req, 'Event locked', 'New peer enrollment is closed after the global lock.'));
-  if (type === 'target' && peerForUser(req.user.id, 'attacker')?.status !== 'connected') return res.status(403).send(setupPage(req, type, '', 'Attacker peer harus connected terlebih dahulu.'));
+  if (type === 'target' && peerForUser(req.user.id, 'attacker')?.status !== 'connected') return res.status(403).send(setupPage(req, type, '', 'The attacker peer must be connected first.'));
   try {
     const result = issueEnrollmentToken(req.user.id, type);
     logEvent(req, 'enrollment_token_issued', 'peer', result.peer.id, { peerType: type });
@@ -1128,7 +1128,7 @@ app.get('/admin/review', requireAdmin, (req, res) => {
 });
 app.get('/admin/review/:id', requireAdmin, (req, res) => {
   const challenge = reviewChallenge(req.params.id);
-  if (!challenge) return res.status(404).send(renderPage('Not found', notice('Not found', 'Challenge tidak ditemukan.', 'bad'), req));
+  if (!challenge) return res.status(404).send(renderPage('Not found', notice('Not found', 'Challenge not found.', 'bad'), req));
   res.send(reviewDetail(req, challenge));
 });
 async function adminHealthRecheck(req, res) {
@@ -1144,8 +1144,8 @@ app.post('/admin/challenges/:id/recheck', requireAdmin, requireCsrf, adminHealth
 app.post('/admin/review/:id/approve', requireAdmin, requireCsrf, (req, res) => {
   const challenge = reviewChallenge(req.params.id);
   if (!challenge) return res.status(404).send('NOT_FOUND');
-  if (currentPhase() === 'LOCKED') return res.status(403).send(reviewDetail(req, challenge, 'Event sudah locked. Approval tidak dapat dilakukan.'));
-  if (challenge.status !== 'pending_review' || challenge.validation_status !== 'passed' || challenge.health_status !== 'healthy') return res.status(400).send(reviewDetail(req, challenge, 'Challenge harus pending_review dan lulus Light Check sebelum approval.'));
+  if (currentPhase() === 'LOCKED') return res.status(403).send(reviewDetail(req, challenge, 'The event is locked. Approval is no longer available.'));
+  if (challenge.status !== 'pending_review' || challenge.validation_status !== 'passed' || challenge.health_status !== 'healthy') return res.status(400).send(reviewDetail(req, challenge, 'The challenge must be pending review and pass Light Check before approval.'));
   db.prepare("UPDATE challenges SET status='approved',reviewer_note=?,approved_at=?,published_at=?,updated_at=? WHERE id=? AND status='pending_review'").run(input(req, 'reviewer_note') || 'Approved by mentor.', nowIso(), nowIso(), nowIso(), challenge.id);
   logEvent(req, 'challenge_approved', 'challenge', challenge.id);
   res.redirect('/admin/review');
@@ -1154,8 +1154,8 @@ app.post('/admin/review/:id/return', requireAdmin, requireCsrf, (req, res) => {
   const challenge = reviewChallenge(req.params.id);
   const note = input(req, 'reviewer_note');
   if (!challenge) return res.status(404).send('NOT_FOUND');
-  if (currentPhase() === 'LOCKED') return res.status(403).send(reviewDetail(req, challenge, 'Event sudah locked.'));
-  if (challenge.status !== 'pending_review' || note.length < 5) return res.status(400).send(reviewDetail(req, challenge, 'Return membutuhkan pending_review dan catatan minimal 5 karakter.'));
+  if (currentPhase() === 'LOCKED') return res.status(403).send(reviewDetail(req, challenge, 'The event is locked.'));
+  if (challenge.status !== 'pending_review' || note.length < 5) return res.status(400).send(reviewDetail(req, challenge, 'The challenge must be pending review, and the revision note must contain at least 5 characters.'));
   db.prepare("UPDATE challenges SET status='draft',validation_status='needs_revision',reviewer_note=?,updated_at=? WHERE id=? AND status='pending_review'").run(note.slice(0, 1000), nowIso(), challenge.id);
   logEvent(req, 'challenge_returned', 'challenge', challenge.id, { noteLength: note.length });
   res.redirect('/admin/review');
@@ -1265,18 +1265,18 @@ app.get('/learn/:module', requireAuth, (req, res) => {
 app.get('/build', requireAuth, (req, res) => {
   const challenge = ownChallenge(req.user.id);
   const target = peerForUser(req.user.id, 'target');
-  let content = pageHead('BUILD / OWN LAB', 'Your lab', 'Satu challenge per CaAs. Isi dan validasi langsung di portal.');
+  let content = pageHead('BUILD / OWN LAB', 'Your lab', 'One challenge per CaAs. Complete and validate it directly in the portal.');
   content += '<div class="stats">' + stat('Target', target?.assigned_ip || 'not assigned', target?.status || 'setup required') + stat('Challenge', challenge?.status || 'not started', challenge?.validation_status || 'not checked') + stat('Health', challenge?.health_status || 'unknown', challenge?.health_detail || 'IP-level status') + '</div>';
-  if (!target || target.status !== 'connected') content += notice('Target belum connected', 'Selesaikan setup target sebelum membuka builder.', 'info');
-  else if (!challenge) content += '<section class="empty"><h2>Belum ada draft</h2><p>Buat challenge pertama melalui builder.</p><a class="button primary" href="/build/challenge">START BUILD</a></section>';
+  if (!target || target.status !== 'connected') content += notice('Target not connected', 'Complete target setup before opening the builder.', 'info');
+  else if (!challenge) content += '<section class="empty"><h2>No draft yet</h2><p>Create your first challenge in the builder.</p><a class="button primary" href="/build/challenge">START BUILD</a></section>';
   else content += '<section class="card"><div class="step-top"><span class="kicker">CURRENT DRAFT</span>' + statusBadge(challenge.status) + '</div><h2>' + esc(challenge.title) + '</h2><p class="muted">' + esc(challenge.description) + '</p><div class="inline-actions"><a class="button primary" href="/build/challenge">EDIT BUILDER</a><form method="post" action="/build/challenge/recheck">' + csrfField(req) + formButton('RECHECK TARGET', 'ghost') + '</form></div></section>';
   res.send(renderPage('Build', content, req));
 });
 app.get('/build/challenge', requireAuth, (req, res) => {
   const target = peerForUser(req.user.id, 'target');
-  if (!target || target.status !== 'connected') return res.status(403).send(renderPage('Builder locked', notice('Builder locked', 'Target peer harus connected terlebih dahulu.', 'info'), req));
+  if (!target || target.status !== 'connected') return res.status(403).send(renderPage('Builder locked', notice('Builder locked', 'The target peer must be connected first.', 'info'), req));
   const challenge = ownChallenge(req.user.id);
-  if (challenge?.status === 'approved') return res.status(403).send(renderPage('Approved lab', notice('Approved lab', 'Approved lab bersifat read-only. Hubungi mentor jika perlu revisi.', 'info'), req));
+  if (challenge?.status === 'approved') return res.status(403).send(renderPage('Approved lab', notice('Approved lab', 'Approved labs are read-only. Ask a mentor to return the lab for revisions.', 'info'), req));
   res.send(builderForm(req, challenge ? builderValues(req, challenge) : {}));
 });
 app.get('/build/challenge/preview', requireAuth, (req, res) => {
@@ -1301,7 +1301,7 @@ app.post('/build/challenge/check', requireAuth, requireCsrf, requireBuilderWrite
   res.status(result.ok ? 200 : 400).send(builderForm(req, values, [], { ok: result.ok, title: result.ok ? 'LIGHT CHECK PASSED' : 'LIGHT CHECK FAILED', items }));
 });
 app.post('/build/challenge/submit', requireAuth, requireCsrf, requireBuilderWrite, async (req, res) => {
-  if (!isBefore(Date.now(), cfg.buildDeadlineAt)) return res.status(403).send(phaseError(req, 'Review queue closed', 'Challenge baru harus masuk sebelum ' + formatWhen(cfg.buildDeadlineAt) + '.'));
+  if (!isBefore(Date.now(), cfg.buildDeadlineAt)) return res.status(403).send(phaseError(req, 'Review queue closed', 'Challenges must be submitted before ' + formatWhen(cfg.buildDeadlineAt) + '.'));
   const values = builderValues(req, ownChallenge(req.user.id));
   const saved = saveChallenge(req, values);
   if (saved.errors) return res.status(400).send(builderForm(req, values, saved.errors));
@@ -1351,27 +1351,27 @@ app.get('/scoreboard', (req, res) => {
 });
 app.get('/lab-space', requireAuth, (req, res) => {
   const phase = currentPhase();
-  let content = pageHead('LAB SPACE / PLAY', 'Find the boundary', 'Target IP dan service tersedia setelah game live.');
-  if (phase !== 'LIVE' && phase !== 'LOCKED') content += notice('Lab Space belum dibuka', 'Open pada ' + formatWhen(cfg.portalOpenAt) + '.', 'info');
+  let content = pageHead('LAB SPACE / PLAY', 'Find the boundary', 'Target IPs and services are available when the game goes live.');
+  if (phase !== 'LIVE' && phase !== 'LOCKED') content += notice('Lab Space is not open', 'Opens at ' + formatWhen(cfg.portalOpenAt) + '.', 'info');
   else {
     const rows = db.prepare("SELECT * FROM challenges WHERE status IN ('approved','locked') AND health_status<>'disabled' ORDER BY id").all();
-    content += rows.length ? '<div class="challenge-grid">' + rows.map((challenge) => challengePublicCard(challenge, req)).join('') + '</div>' : '<div class="empty"><h2>Belum ada lab</h2><p>Menunggu mentor approval.</p></div>';
+    content += rows.length ? '<div class="challenge-grid">' + rows.map((challenge) => challengePublicCard(challenge, req)).join('') + '</div>' : '<div class="empty"><h2>No labs yet</h2><p>Waiting for mentor approval.</p></div>';
   }
   res.send(renderPage('Lab Space', content, req));
 });
 app.get('/lab-space/:id', requireAuth, (req, res) => {
   const challenge = db.prepare("SELECT * FROM challenges WHERE id=? AND status IN ('approved','locked') AND health_status<>'disabled'").get(Number(req.params.id));
-  if (!challenge || (currentPhase() !== 'LIVE' && currentPhase() !== 'LOCKED')) return res.status(404).send(renderPage('Not found', notice('Lab unavailable', 'Lab belum tersedia.', 'bad'), req));
+  if (!challenge || (currentPhase() !== 'LIVE' && currentPhase() !== 'LOCKED')) return res.status(404).send(renderPage('Not found', notice('Lab unavailable', 'This lab is not available.', 'bad'), req));
   const services = parseStoredServices(challenge.services);
   const solved = Boolean(db.prepare('SELECT id FROM submissions WHERE user_id=? AND challenge_id=? AND correct=1').get(req.user.id, challenge.id));
   const own = challenge.owner_user_id === req.user.id;
-  let content = pageHead('LAB SPACE / LAB ' + String(challenge.id).padStart(2, '0'), challenge.title, 'Solver identity dan owner identity tidak ditampilkan.');
+  let content = pageHead('LAB SPACE / LAB ' + String(challenge.id).padStart(2, '0'), challenge.title, 'Solver and owner identities are hidden.');
   content += '<div class="target-banner"><span class="kicker">TARGET IP</span><strong>' + esc(challenge.target_ip) + '</strong><button type="button" class="copy-button inline" data-copy="' + esc(challenge.target_ip) + '">COPY IP</button>' + statusBadge(challenge.health_status) + '</div>';
   content += '<section class="card"><h2>Services</h2><div class="service-table">' + services.map((service) => '<div><code>' + esc(service.port + '/' + service.protocol) + '</code><strong>' + esc(service.label) + '</strong><span>' + esc(service.note || '') + '</span></div>').join('') + '</div><details><summary>COMMANDS</summary>' + services.map((service) => commandBlock('nmap -sV -p ' + service.port + ' ' + challenge.target_ip)).join('') + '</details></section>';
   content += '<section class="card"><h2>Challenge</h2><p>' + nl2br(challenge.description) + '</p><details><summary>INITIAL HINT</summary><p>' + nl2br(challenge.initial_hint) + '</p></details></section>';
-  if (own) content += '<div class="callout danger"><strong>SELF-SOLVE BLOCKED</strong><p>Challenge owner tidak dapat submit flag untuk lab sendiri.</p></div>';
-  else if (currentPhase() === 'LOCKED') content += '<div class="notice compact"><strong>LOCKED</strong><p>Leaderboard dan flag submission sudah dibekukan.</p></div>';
-  else if (solved) content += '<div class="notice compact good"><strong>SOLVED</strong><p>Flag sudah tercatat untuk akun ini.</p></div>';
+  if (own) content += '<div class="callout danger"><strong>SELF-SOLVE BLOCKED</strong><p>Challenge owners cannot submit flags for their own lab.</p></div>';
+  else if (currentPhase() === 'LOCKED') content += '<div class="notice compact"><strong>LOCKED</strong><p>Leaderboard and flag submissions are frozen.</p></div>';
+  else if (solved) content += '<div class="notice compact good"><strong>SOLVED</strong><p>Your flag has already been recorded.</p></div>';
   else content += '<form method="post" action="/lab-space/' + challenge.id + '/flag" class="flag-form">' + csrfField(req) + '<label>Submit flag<input name="flag" maxlength="120" autocomplete="off" placeholder="MBC{...}" required></label>' + formButton('SUBMIT FLAG') + '</form>';
   if (currentPhase() === 'LIVE') content += '<form method="post" action="/lab-space/' + challenge.id + '/report" class="report-form">' + csrfField(req) + formButton('REPORT UNREACHABLE', 'danger') + '</form>';
   res.send(renderPage(challenge.title, content, req));
@@ -1379,10 +1379,10 @@ app.get('/lab-space/:id', requireAuth, (req, res) => {
 app.post('/lab-space/:id/flag', submitLimiter, requireAuth, requireCsrf, requireLive, (req, res) => {
   const id = Number(req.params.id);
   const challenge = db.prepare("SELECT * FROM challenges WHERE id=? AND status='approved' AND health_status<>'disabled'").get(id);
-  if (!challenge) return res.status(404).send(renderPage('Unavailable', notice('Unavailable', 'Challenge tidak tersedia.', 'bad'), req));
-  if (challenge.owner_user_id === req.user.id) return res.status(403).send(renderPage('Self-solve blocked', notice('Self-solve blocked', 'Owner challenge tidak dapat disolve oleh pemiliknya.', 'bad'), req));
+  if (!challenge) return res.status(404).send(renderPage('Unavailable', notice('Unavailable', 'Challenge is not available.', 'bad'), req));
+  if (challenge.owner_user_id === req.user.id) return res.status(403).send(renderPage('Self-solve blocked', notice('Self-solve blocked', 'You cannot solve your own challenge.', 'bad'), req));
   const flag = input(req, 'flag');
-  if (!validFlag(flag)) return res.status(400).send(renderPage('Invalid flag', notice('Invalid flag', 'Gunakan format case-sensitive MBC{...}.', 'bad'), req));
+  if (!validFlag(flag)) return res.status(400).send(renderPage('Invalid flag', notice('Invalid flag', 'Use the case-sensitive MBC{...} format.', 'bad'), req));
   if (db.prepare('SELECT id FROM submissions WHERE user_id=? AND challenge_id=? AND correct=1').get(req.user.id, id)) return res.redirect('/lab-space/' + id);
   const correct = sameHash(challenge.flag_hash, sha256(flag));
   const firstBlood = withTransaction(() => {
@@ -1391,11 +1391,11 @@ app.post('/lab-space/:id/flag', submitLimiter, requireAuth, requireCsrf, require
     return Boolean(first);
   });
   logEvent(req, correct ? 'flag_correct' : 'flag_incorrect', 'challenge', id, { firstBlood });
-  res.status(correct ? 200 : 400).send(renderPage(correct ? 'Flag accepted' : 'Flag rejected', notice(correct ? 'Flag accepted' : 'Flag rejected', correct ? (firstBlood ? 'Correct. First blood +10. Total +110.' : 'Correct. +100 points.') : 'Belum tepat. Jaga evidence chain dan coba lagi.', correct ? 'good' : 'bad'), req));
+  res.status(correct ? 200 : 400).send(renderPage(correct ? 'Flag accepted' : 'Flag rejected', notice(correct ? 'Flag accepted' : 'Flag rejected', correct ? (firstBlood ? 'Correct. First blood +10. Total +110.' : 'Correct. +100 points.') : 'Not correct yet. Preserve your evidence chain and try again.', correct ? 'good' : 'bad'), req));
 });
 app.post('/lab-space/:id/report', submitLimiter, requireAuth, requireCsrf, requireLive, async (req, res) => {
   const challenge = db.prepare("SELECT * FROM challenges WHERE id=? AND status='approved'").get(Number(req.params.id));
-  if (!challenge) return res.status(404).send(renderPage('Unavailable', notice('Unavailable', 'Challenge tidak tersedia.', 'bad'), req));
+  if (!challenge) return res.status(404).send(renderPage('Unavailable', notice('Unavailable', 'Challenge is not available.', 'bad'), req));
   const recent = db.prepare('SELECT id FROM lab_issue_reports WHERE challenge_id=? AND reporter_id=? AND created_at>?').get(challenge.id, req.user.id, new Date(Date.now() - 10 * 60 * 1000).toISOString());
   if (recent) return res.redirect('/lab-space/' + challenge.id);
   const report = db.prepare("INSERT INTO lab_issue_reports(challenge_id,reporter_id,reason) VALUES(?,?, 'target_unreachable')").run(challenge.id, req.user.id);
