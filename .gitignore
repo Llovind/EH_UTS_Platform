@@ -9,3 +9,4 @@ tmp-browser-data/
 .playwright-cli/
 invites*.csv
 caas-ids*.txt
+*activation-roster*.csv
