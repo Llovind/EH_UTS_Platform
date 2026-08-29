@@ -265,6 +265,8 @@ test('runnable setup surface exposes health, public installer, and enrollment se
   assert.equal(preview.status, 200);
   assert.match(previewText, /Quiet Backup/);
   assert.doesNotMatch(previewText, /SUID|secret-path|test_flag/);
+  assert.doesNotMatch(previewText, /REDACTION CHECK/);
+  assert.match(previewText, /preview-stack/);
 
   const submitted = await fetch(base + '/build/challenge/submit', {
     method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded', cookie }, body: bodyEntries(builderEntries),

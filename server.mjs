@@ -788,10 +788,11 @@ function builderForm(req, values = {}, errors = [], result = null) {
 function playerPreview(req, challenge, peer) {
   const services = parseStoredServices(challenge.services);
   let body = pageHead('BUILD / PLAYER PREVIEW', challenge.title, 'This preview shows only what solvers will see.');
+  body += '<div class="preview-stack">';
   body += '<div class="target-banner"><span class="kicker">TARGET IP</span><strong>' + esc(peer.assigned_ip) + '</strong><span class="status ' + esc(challenge.health_status) + '">' + esc(challenge.health_status) + '</span></div>';
   body += '<section class="card"><h2>Services</h2><div class="service-table">' + services.map((service) => '<div><code>' + esc(service.port + '/' + service.protocol) + '</code><strong>' + esc(service.label) + '</strong><span>' + esc(service.note || '') + '</span></div>').join('') + '</div></section>';
   body += '<section class="card"><h2>Challenge</h2><p>' + nl2br(challenge.description) + '</p><details><summary>INITIAL HINT</summary><p>' + nl2br(challenge.initial_hint) + '</p></details></section>';
-  body += '<div class="callout"><strong>REDACTION CHECK</strong><p>Owner ID, intended path, privilege-escalation technique, flag location, flag, and mentor notes are not shown.</p></div><a class="button ghost" href="/build/challenge">BACK TO BUILDER</a>';
+  body += '</div><div class="preview-actions"><a class="button ghost" href="/build/challenge">BACK TO BUILDER</a></div>';
   return renderPage('Player preview', body, req);
 }
 function ownChallenge(userId) {

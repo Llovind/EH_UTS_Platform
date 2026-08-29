@@ -136,6 +136,11 @@ summary { cursor: pointer; color: var(--blue); font-family: "IBM Plex Mono", Con
 
 .target-banner { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; margin-bottom: 1rem; padding: .9rem 1rem; border: 1px solid var(--blue); background: var(--blue-soft); }
 .target-banner strong { color: var(--text); font: 700 1.2rem "IBM Plex Mono", Consolas, monospace; }
+.preview-stack { display: grid; gap: 1rem; }
+.preview-stack .target-banner { margin-bottom: 0; }
+.preview-stack .card { padding: 1.15rem; }
+.preview-stack .card h2 { margin-top: 0; }
+.preview-actions { margin-top: 1.25rem; }
 .service-table { display: grid; gap: .4rem; }
 .service-table > div { display: grid; grid-template-columns: 7rem 10rem 1fr; gap: .75rem; padding: .65rem 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: .76rem; }
 .service-table strong { color: var(--text); }
