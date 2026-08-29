@@ -13,6 +13,7 @@
 }
 
 * { box-sizing: border-box; }
+html, body { overflow-x: hidden; }
 html { background: var(--bg); color: var(--text); }
 body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font-family: "DM Sans", "Segoe UI", Arial, sans-serif; line-height: 1.5; }
 body, button, input, select, textarea { font-size: 15px; }
@@ -187,6 +188,30 @@ summary { cursor: pointer; color: var(--blue); font-family: "IBM Plex Mono", Con
   .score-row { grid-template-columns: 2.5rem 1fr 4rem; font-size: .68rem; }
   .score-row > :last-child { display: none; }
   .site-footer { flex-direction: column; }
+}
+
+@media (max-width: 520px) {
+  body, button, input, select, textarea { font-size: 16px; }
+  .site-header { padding: .85rem 1rem; }
+  .brand { gap: .55rem; font-size: .62rem; letter-spacing: .08em; }
+  .brand img { width: 6.6rem; }
+  .site-header nav { width: 100%; gap: .45rem .75rem; font-size: .62rem; }
+  .site-header nav a, .nav-form button { min-height: 2.55rem; display: inline-flex; align-items: center; }
+  .nav-cta { padding: .5rem .7rem; }
+  .shell { padding: 1.5rem .85rem 3.5rem; }
+  .page-head { margin-bottom: 1.35rem; }
+  .page-head h1 { font-size: clamp(2.25rem, 14vw, 3.8rem); }
+  .hero-compact h1 { font-size: clamp(2.8rem, 15vw, 4.8rem); }
+  .hero-actions .button, .form-actions .button, .form-actions button { width: 100%; }
+  .form-card, .form-wrap { margin-top: 1rem; padding: .85rem; }
+  fieldset { padding: .8rem; }
+  .service-row { grid-template-columns: 1fr; }
+  .step-card, .step-panel { gap: .7rem; padding: .85rem; }
+  .step-number { font-size: 1.45rem; }
+  .target-banner { align-items: flex-start; flex-direction: column; gap: .45rem; }
+  .target-banner .copy-button { position: static; }
+  .flag-form .button, .report-form .button { width: 100%; }
+  .timeline div { align-items: flex-start; flex-direction: column; gap: .15rem; }
 }
 
 :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }

@@ -893,7 +893,7 @@ app.post('/register', authLimiter, requireCsrf, (req, res) => {
 });
 
 app.get('/login', (req, res) => {
-  const content = pageHead('ACCOUNT / SIGN IN', 'Sign in', 'Participant memakai akun individual. Admin juga memerlukan TOTP dan WireGuard.') +
+  const content = pageHead('ACCOUNT / SIGN IN', 'Sign in', 'Masuk menggunakan CaAs ID dan password.') +
     '<form method="post" action="/login" class="form-card">' + csrfField(req) +
     '<label>CaAs ID<input name="caas_id" autocomplete="username" maxlength="40" required></label>' +
     '<label>Password<input name="password" type="password" autocomplete="current-password" required></label>' +
