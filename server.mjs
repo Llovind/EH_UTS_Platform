@@ -513,7 +513,7 @@ function installerBootstrap(token) {
     'printf "[INFO] Downloading the official MBC LAS Week 4 WireGuard installer.\\n"',
     'curl -fsSL ' + tls + cfg.origin + '/setup/linux.sh | bash -s -- ' + shellQuote(token),
     '',
-  ].join('\\n');
+  ].join('\n');
 }
 function setupPage(req, type, token = '', error = '') {
   const peer = peerForUser(req.user.id, type);
