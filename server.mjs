@@ -417,7 +417,7 @@ function confirmationField(label, expected) {
 function renderPage(title, content, req) {
   const user = req.user;
   const nav = user
-    ? '<a href="/learn">Learn</a><a href="/setup">Setup</a><a href="/build">Build</a><a href="/lab-space">Lab Space</a><a href="/scoreboard">Scoreboard</a>' +
+    ? '<a href="/setup">Lab Config</a><a href="/learn">Learn</a><a href="/build">Build</a><a href="/lab-space">Lab Space</a><a href="/scoreboard">Scoreboard</a>' +
       (user.role === 'admin' ? '<a href="/admin">Admin</a>' : '') +
       '<form class="nav-form" method="post" action="/logout">' + csrfField(req) + '<button type="submit">Sign out</button></form>'
     : '<a href="/scoreboard">Scoreboard</a><a class="nav-cta" href="/login">Sign in</a>';
@@ -508,15 +508,14 @@ function setupCommand(token) {
 function setupPage(req, type, token = '', error = '') {
   const peer = peerForUser(req.user.id, type);
   const readOnly = Boolean(req.user?.isVisitor);
-  const locked = type === 'target' && peerForUser(req.user.id, 'attacker')?.status !== 'connected';
   const title = type === 'attacker' ? 'Setup attacker' : 'Setup target';
   const osText = type === 'attacker' ? 'Kali Linux VM or Kali Linux WSL' : 'Ubuntu target VM or VPS';
-  const initialStatus = locked ? 'locked' : peer?.status || 'not_started';
+  const initialStatus = peer?.status || 'not_started';
   let body = pageHead('SETUP / ' + type.toUpperCase(), title, osText);
-  body += '<div class="notice compact" data-setup-status data-peer-type="' + esc(type) + '" data-status="' + esc(initialStatus) + '"><strong data-status-value>' + (readOnly ? 'READ-ONLY' : locked ? 'LOCKED' : peer?.status === 'connected' ? 'CONNECTED' : 'NOT CONNECTED') + '</strong><p>' +
-    (readOnly ? 'Visitor accounts can view setup guidance but cannot create or change peers.' : locked ? 'Complete attacker setup first.' : 'One ' + type + ' peer is assigned to this account.') + '</p><small>IP: <code data-status-ip>' + esc(peer?.assigned_ip || 'NOT ASSIGNED') + '</code> · Last verified: <span data-status-verified>' + esc(peer?.last_verified_at || 'NOT VERIFIED') + '</span></small></div>';
+  body += '<div class="notice compact" data-setup-status data-peer-type="' + esc(type) + '" data-status="' + esc(initialStatus) + '"><strong data-status-value>' + (readOnly ? 'READ-ONLY' : peer?.status === 'connected' ? 'CONNECTED' : 'NOT CONNECTED') + '</strong><p>' +
+    (readOnly ? 'Visitor accounts can view setup guidance but cannot create or change peers.' : 'One ' + type + ' peer is assigned to this account.') + '</p><small>IP: <code data-status-ip>' + esc(peer?.assigned_ip || 'NOT ASSIGNED') + '</code> · Last verified: <span data-status-verified>' + esc(peer?.last_verified_at || 'NOT VERIFIED') + '</span></small></div>';
   if (error) body += '<div class="flash bad">' + esc(error) + '</div>';
-  if (!readOnly && !locked) {
+  if (!readOnly) {
     body += '<section class="step-panel"><div class="step-number">01</div><div><h2>Generate setup command</h2><p class="muted">The token expires in 10 minutes and can be used only once.</p><form method="post" action="/api/setup/' + type + '/token">' + csrfField(req) + formButton('GENERATE COMMAND') + '</form></div></section>';
     if (token) {
       body += '<section class="step-panel"><div class="step-number">02</div><div><h2>Run in ' + esc(type === 'attacker' ? 'Kali' : 'Ubuntu') + '</h2>' + commandBlock(setupCommand(token)) +
@@ -971,10 +970,11 @@ function workspace(req, res) {
   let content = pageHead('WORKSPACE / ' + req.user.caasId, 'Next action', 'Complete the steps from top to bottom.');
   content += '<div class="stats">' + stat('Event', phase, 'WIB schedule') + stat('Your score', String(score.points), score.solved + ' solved') + stat('Own lab', challenge?.status || 'not started', 'owner ID admin-only') + '</div>';
   content += '<section class="step-list">' +
-    stepCard('01', 'SETUP ATTACKER', status.attacker?.status || 'not_started', 'Kali VM or Kali WSL. Use the tunnel to test peer labs.', '/setup/attacker') +
-    stepCard('02', 'SETUP TARGET', status.target?.status || (status.attacker?.status === 'connected' ? 'not_started' : 'locked'), 'Ubuntu target. Build your lab after the tunnel is active.', status.attacker?.status === 'connected' ? '/setup/target' : '') +
+    stepCard('01', 'LAB CONFIGURATION', 'ready', 'Review network rules and the setup order before connecting a peer.', '/setup') +
+    stepCard('02', 'SETUP TARGET', status.target?.status || 'not_started', 'Ubuntu target. This is the lab host and should be connected first.', '/setup/target') +
     stepCard('03', 'BUILD YOUR LAB', buildState, 'Create the challenge in the portal, then run Light Check.', targetReady ? '/build' : '') +
-    stepCard('04', 'LAB SPACE', labState, 'Open peer labs, use the available commands, and submit flags.', phase === 'LIVE' || phase === 'LOCKED' ? '/lab-space' : '') +
+    stepCard('04', 'SETUP ATTACKER', status.attacker?.status || 'not_started', 'Kali VM or Kali WSL. Use the tunnel to test peer labs.', '/setup/attacker') +
+    stepCard('05', 'LAB SPACE', labState, 'Open peer labs, use the available commands, and submit flags.', phase === 'LIVE' || phase === 'LOCKED' ? '/lab-space' : '') +
     '</section>';
   content += '<div class="inline-actions"><a class="button ghost small" href="/learn">OPEN LEARN MODULES</a></div>';
   content += '<section class="timeline"><span class="kicker">SCHEDULE</span><div><strong>BUILD</strong><span>Until ' + esc(formatWhen(cfg.buildDeadlineAt)) + '</span></div><div><strong>LIVE</strong><span>' + esc(formatWhen(cfg.portalOpenAt)) + '</span></div><div><strong>LOCK</strong><span>' + esc(formatWhen(cfg.gameLockAt)) + '</span></div></section>';
@@ -986,9 +986,10 @@ app.get('/dashboard', requireAuth, (req, res) => res.redirect('/workspace'));
 app.get('/setup', requireAuth, (req, res) => {
   const status = setupStatus(req.user.id);
   const content = pageHead('SETUP / WIREGUARD', 'Connect the lab network', 'One attacker peer and one target peer are assigned to each CaAs account.') +
+    '<section class="callout"><strong>01 / LAB CONFIGURATION</strong><p>Portal access may be public. Target IPs and vulnerable services are reachable only through WireGuard. Keep the generated private key on its own machine.</p></section>' +
     '<div class="step-list">' +
-    stepCard('01', 'ATTACKER', status.attacker?.status || 'not_started', 'Kali VM or Kali WSL.', '/setup/attacker') +
-    stepCard('02', 'TARGET', status.target?.status || 'not_started', 'Ubuntu VM or optional VPS.', status.attacker?.status === 'connected' ? '/setup/target' : '') +
+    stepCard('02', 'TARGET', status.target?.status || 'not_started', 'Ubuntu VM or optional VPS. Connect the lab host before testing.', '/setup/target') +
+    stepCard('03', 'ATTACKER', status.attacker?.status || 'not_started', 'Kali VM or Kali WSL. Connect after the lab is configured.', '/setup/attacker') +
     '</div><section class="callout"><strong>NETWORK RULE</strong><p>The portal may be public. Target IPs are reachable only through WireGuard.</p></section>' +
     (req.user.isVisitor ? '<section class="notice compact"><strong>READ-ONLY VISITOR</strong><p>Setup actions are disabled for this account.</p></section>' : '') +
     '<a class="button ghost" href="/workspace">BACK TO WORKSPACE</a>';
@@ -1001,7 +1002,6 @@ app.get('/setup/:type', requireAuth, requirePeerTypeParam, (req, res) => res.set
 app.post('/api/setup/:type/token', requireAuth, requireWriteAccess, requirePeerTypeParam, requireCsrf, enrollmentLimiter, (req, res) => {
   const type = req.params.type;
   if (currentPhase() === 'LOCKED') return res.status(403).send(phaseError(req, 'Event locked', 'New peer enrollment is closed after the global lock.'));
-  if (type === 'target' && peerForUser(req.user.id, 'attacker')?.status !== 'connected') return res.status(403).send(setupPage(req, type, '', 'The attacker peer must be connected first.'));
   try {
     const result = issueEnrollmentToken(req.user.id, type);
     logEvent(req, 'enrollment_token_issued', 'peer', result.peer.id, { peerType: type });

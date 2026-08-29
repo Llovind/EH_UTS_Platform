@@ -160,8 +160,23 @@ test('runnable setup surface exposes health, public installer, and enrollment se
   const workspace = await fetch(base + '/workspace', { headers: { cookie } });
   const workspaceText = await workspace.text();
   assert.equal(workspace.status, 200);
+  assert.match(workspaceText, /LAB CONFIGURATION/);
   assert.match(workspaceText, /SETUP ATTACKER/);
   assert.match(workspaceText, /BUILD YOUR LAB/);
+  assert.ok(workspaceText.indexOf('LAB CONFIGURATION') < workspaceText.indexOf('SETUP ATTACKER'));
+  assert.ok(workspaceText.indexOf('LAB CONFIGURATION') < workspaceText.indexOf('SETUP TARGET'));
+  assert.ok(workspaceText.indexOf('SETUP TARGET') < workspaceText.indexOf('BUILD YOUR LAB'));
+  assert.ok(workspaceText.indexOf('BUILD YOUR LAB') < workspaceText.indexOf('SETUP ATTACKER'));
+
+  const setupOverview = await fetch(base + '/setup', { headers: { cookie } });
+  const setupOverviewText = await setupOverview.text();
+  assert.equal(setupOverview.status, 200);
+  assert.ok(setupOverviewText.indexOf('LAB CONFIGURATION') < setupOverviewText.indexOf('TARGET'));
+  assert.ok(setupOverviewText.indexOf('TARGET') < setupOverviewText.indexOf('ATTACKER'));
+
+  const targetBeforeAttacker = await fetch(base + '/setup/target', { headers: { cookie } });
+  assert.equal(targetBeforeAttacker.status, 200);
+  assert.doesNotMatch(await targetBeforeAttacker.text(), /Complete attacker setup first|LOCKED/);
 
   const setupPage = await fetch(base + '/setup/attacker', { headers: { cookie } });
   const setupCsrf = csrfFrom(await setupPage.text());
