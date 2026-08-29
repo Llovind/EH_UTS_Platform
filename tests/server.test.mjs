@@ -283,7 +283,7 @@ test('admin review is protected by WireGuard source and redacts flag material fr
   const loginCsrf = csrfFrom(await loginPage.text());
   const login = await fetch(base + '/login', {
     method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: loginCookie },
-    body: body({ _csrf: loginCsrf, caas_id: 'MBC-ADMIN', password: 'A-valid-admin-password-123', totp: '' }),
+    body: body({ _csrf: loginCsrf, caas_id: 'MBC-ADMIN', password: 'A-valid-admin-password-123' }),
   });
   assert.equal(login.status, 302);
   const adminCookie = sessionCookie(login);

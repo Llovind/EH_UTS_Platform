@@ -18,7 +18,6 @@ export function buildConfig(env = {}, baseDir = process.cwd()) {
     appKey: String(value(env, 'APP_KEY_BASE64', '')),
     adminId: normalizeId(value(env, 'ADMIN_ID', 'MBC-ADMIN')),
     adminPassword: String(value(env, 'ADMIN_PASSWORD', '')),
-    adminTotp: String(value(env, 'ADMIN_TOTP_SECRET', '')),
     buildDeadlineAt: String(value(env, 'BUILD_DEADLINE_AT', '2026-09-02T09:00:00+07:00')),
     portalOpenAt: String(value(env, 'PORTAL_OPEN_AT', '2026-09-02T11:00:00+07:00')),
     submissionDeadlineAt: String(value(env, 'SUBMISSION_DEADLINE_AT', '2026-09-04T15:00:00+07:00')),

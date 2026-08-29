@@ -18,7 +18,6 @@ import {
   isStrongPassword,
   isInCidr,
   validFlag,
-  verifyTotp,
   ipv4InRange,
   validWireguardPublicKey,
 } from './src/security.mjs';
@@ -47,8 +46,8 @@ if (!cfg.appKey || appKeyBytes.length !== 32) {
   console.error('APP_KEY_BASE64 is required. Copy .env.example to .env and set a random 32-byte key.');
   process.exit(1);
 }
-if (cfg.production && (!cfg.adminPassword || cfg.adminPassword.length < 16 || !cfg.adminTotp)) {
-  console.error('ADMIN_PASSWORD (16+ chars) and ADMIN_TOTP_SECRET are required in production.');
+if (cfg.production && (!cfg.adminPassword || cfg.adminPassword.length < 16)) {
+  console.error('ADMIN_PASSWORD (16+ chars) is required in production.');
   process.exit(1);
 }
 if (cfg.production && (!validWireguardPublicKey(cfg.wgServerPublicKey) || cfg.wgServerPublicKey === 'HUB_PUBLIC_KEY')) {
@@ -897,7 +896,6 @@ app.get('/login', (req, res) => {
     '<form method="post" action="/login" class="form-card">' + csrfField(req) +
     '<label>CaAs ID<input name="caas_id" autocomplete="username" maxlength="40" required></label>' +
     '<label>Password<input name="password" type="password" autocomplete="current-password" required></label>' +
-    '<label>Admin TOTP <small>Admin accounts</small><input name="totp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6-digit code"><small>Enter the current code from your authenticator app.</small></label>' +
     formButton('SIGN IN') + '</form><p class="form-foot">Not activated yet? <a href="/register">Activate account</a></p>';
   res.send(renderPage('Sign in', content, req));
 });
@@ -905,10 +903,9 @@ app.post('/login', authLimiter, requireCsrf, (req, res) => {
   const caasId = normalizeId(input(req, 'caas_id'));
   const user = db.prepare('SELECT * FROM users WHERE caas_id=? AND active=1').get(caasId);
   const passwordOk = Boolean(user && verifyPassword(input(req, 'password'), user.password_hash));
-  const totpOk = user?.role === 'admin' ? verifyTotp(input(req, 'totp'), cfg.adminTotp) : true;
-  if (!passwordOk || !totpOk) {
+  if (!passwordOk) {
     logEvent(req, 'login_failed', 'user', user?.id || null);
-    return res.status(401).send(renderPage('Sign in failed', notice('Sign in failed', 'The credentials or second factor are invalid.', 'bad'), req));
+    return res.status(401).send(renderPage('Sign in failed', notice('Sign in failed', 'The credentials are invalid.', 'bad'), req));
   }
   clearSession(req);
   req.user = { id: user.id, caasId: user.caas_id, role: user.role };
@@ -1117,7 +1114,7 @@ app.get('/admin', requireAdmin, (req, res) => {
   const degraded = db.prepare("SELECT COUNT(*) AS count FROM challenges WHERE health_status='degraded'").get().count;
   const content = pageHead('ADMIN / OPERATIONS', 'Review queue', 'Approve only labs that pass the deterministic Light Check.') +
     '<div class="stats">' + stat('Pending review', String(pending), 'needs mentor decision') + stat('Approved', String(approved), 'published when live') + stat('Degraded', String(degraded), 'target IP unreachable') + '</div>' +
-    '<div class="admin-actions"><a class="button primary" href="/admin/review">OPEN REVIEW QUEUE</a><a class="button ghost" href="/admin/peers">PEERS</a><a class="button ghost" href="/admin/health">HEALTH</a><a class="button ghost" href="/admin/event">EVENT</a><a class="button ghost" href="/admin/audit">AUDIT</a></div><div class="security-callout"><strong>PRIVATE ROUTE</strong><span>Admin access requires the admin account, TOTP, and a source inside the WireGuard CIDR.</span></div>';
+    '<div class="admin-actions"><a class="button primary" href="/admin/review">OPEN REVIEW QUEUE</a><a class="button ghost" href="/admin/peers">PEERS</a><a class="button ghost" href="/admin/health">HEALTH</a><a class="button ghost" href="/admin/event">EVENT</a><a class="button ghost" href="/admin/audit">AUDIT</a></div><div class="security-callout"><strong>PRIVATE ROUTE</strong><span>Admin access requires the admin account and a source inside the WireGuard CIDR.</span></div>';
   res.send(renderPage('Admin', content, req));
 });
 app.get('/admin/review', requireAdmin, (req, res) => {

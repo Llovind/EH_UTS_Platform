@@ -71,34 +71,6 @@ export function decryptSecret(encoded, appKeyBase64) {
   return Buffer.concat([decipher.update(Buffer.from(ciphertextText, 'base64url')), decipher.final()]).toString('utf8');
 }
 
-function base32ToBuffer(value) {
-  const clean = String(value || '').toUpperCase().replace(/[^A-Z2-7]/g, '');
-  let bits = '';
-  for (const char of clean) bits += ("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".indexOf(char)).toString(2).padStart(5, '0');
-  const bytes = [];
-  for (let i = 0; i + 8 <= bits.length; i += 8) bytes.push(parseInt(bits.slice(i, i + 8), 2));
-  return Buffer.from(bytes);
-}
-
-export function verifyTotp(code, secret, now = Date.now()) {
-  if (!secret) return process.env.NODE_ENV !== 'production';
-  const normalized = String(code || '').replace(/\s/g, '');
-  if (!/^\d{6}$/.test(normalized)) return false;
-  const key = base32ToBuffer(secret);
-  if (!key.length) return false;
-  const counter = Math.floor(now / 1000 / 30);
-  for (let offset = -1; offset <= 1; offset += 1) {
-    const data = Buffer.alloc(8);
-    data.writeBigUInt64BE(BigInt(counter + offset));
-    const digest = crypto.createHmac('sha1', key).update(data).digest();
-    const index = digest[digest.length - 1] & 0x0f;
-    const number = ((digest[index] & 0x7f) << 24) | (digest[index + 1] << 16) | (digest[index + 2] << 8) | digest[index + 3];
-    const expected = String(number % 1_000_000).padStart(6, '0');
-    if (crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(normalized))) return true;
-  }
-  return false;
-}
-
 export function isInCidr(ip, cidr) {
   const [networkText, prefixText] = String(cidr).split('/');
   const prefix = Number(prefixText);

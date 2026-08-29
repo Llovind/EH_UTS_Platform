@@ -44,7 +44,7 @@ Memastikan seluruh perjalanan peserta dan mentor berjalan melalui UI, dengan tar
 | ID | Langkah UI | Ekspektasi |
 |---|---|---|
 | A-01 | Guest membuka route admin | Route disamarkan/ditolak; tidak membocorkan data admin. |
-| A-02 | Admin login dari IP WireGuard + TOTP valid | Admin dashboard terbuka. |
+| A-02 | Admin login from a WireGuard IP with the admin password | Admin dashboard opens. |
 | A-03 | Review queue | Owner ID, status, health, dan detail teknis terlihat; flag material tetap terlindungi. |
 | A-04 | Approve/return challenge | Status berubah dan audit log tercatat. |
 | A-05 | Recheck health | Probe memakai target IP; status `degraded` hanya setelah handshake stale + tiga kegagalan berjarak. |
