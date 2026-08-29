@@ -401,3 +401,59 @@ test('scheduled lock is authoritative and freezes challenge state even without a
   assert.equal(lockedDb.prepare('SELECT status FROM challenges WHERE title=?').get('Lock Fixture').status, 'locked');
   lockedDb.close();
 });
+
+test('visitor accounts are read-only, hidden from scoreboard, and cannot access admin', async (t) => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mbc-las-w4-visitor-'));
+  const port = await freePort();
+  const running = startServer(dataDir, port);
+  t.after(async () => {
+    await stopServer(running.child);
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  });
+  await running.ready;
+
+  const db = new DatabaseSync(path.join(dataDir, 'las-week4.db'));
+  db.prepare("INSERT INTO users(caas_id,password_hash,role,is_visitor,is_test) VALUES(?,?, 'participant',1,0)").run('MBC-VISITOR', hashPassword('CS#TrustBreaker2526'));
+  db.prepare("INSERT INTO users(caas_id,password_hash,role,is_visitor,is_test) VALUES(?,?, 'participant',0,1)").run('TEST-CAAS-01', hashPassword('LASW4-Test1!2026'));
+  db.close();
+
+  const base = 'http://127.0.0.1:' + port;
+  const loginPage = await fetch(base + '/login');
+  const loginCookie = setCookies(loginPage).find((value) => value.startsWith('mbc_las_sid=')) || '';
+  const loginCsrf = csrfFrom(await loginPage.text());
+  const login = await fetch(base + '/login', {
+    method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: loginCookie },
+    body: body({ _csrf: loginCsrf, caas_id: 'MBC-VISITOR', password: 'CS#TrustBreaker2526' }),
+  });
+  assert.equal(login.status, 302);
+  assert.equal(login.headers.get('location'), '/workspace');
+  const visitorCookie = sessionCookie(login);
+
+  const workspace = await fetch(base + '/workspace', { headers: { cookie: visitorCookie } });
+  const workspaceText = await workspace.text();
+  assert.equal(workspace.status, 200);
+  assert.match(workspaceText, /Learn/);
+  assert.doesNotMatch(workspaceText, /href="\/admin"/);
+
+  const learn = await fetch(base + '/learn', { headers: { cookie: visitorCookie } });
+  assert.equal(learn.status, 200);
+  assert.match(await learn.text(), /Week 4 scope/);
+
+  const admin = await fetch(base + '/admin', { headers: { cookie: visitorCookie } });
+  assert.equal(admin.status, 404);
+
+  const setup = await fetch(base + '/setup/attacker', { headers: { cookie: visitorCookie } });
+  const setupText = await setup.text();
+  assert.equal(setup.status, 200);
+  assert.match(setupText, /READ-ONLY/);
+  assert.doesNotMatch(setupText, /GENERATE COMMAND/);
+  const deniedSetup = await fetch(base + '/api/setup/attacker/token', {
+    method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: visitorCookie }, body: '',
+  });
+  assert.equal(deniedSetup.status, 403);
+
+  const scoreboard = await fetch(base + '/scoreboard');
+  const scoreboardText = await scoreboard.text();
+  assert.equal(scoreboard.status, 200);
+  assert.doesNotMatch(scoreboardText, /MBC-VISITOR|TEST-CAAS-01/);
+});

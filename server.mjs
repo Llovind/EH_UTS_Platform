@@ -89,6 +89,8 @@ db.exec(
   'caas_id TEXT NOT NULL UNIQUE,' +
   'password_hash TEXT NOT NULL,' +
   "role TEXT NOT NULL CHECK(role IN ('participant','admin')) DEFAULT 'participant'," +
+  'is_visitor INTEGER NOT NULL DEFAULT 0,' +
+  'is_test INTEGER NOT NULL DEFAULT 0,' +
   'active INTEGER NOT NULL DEFAULT 1,' +
   'created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,' +
   'last_login_at TEXT' +
@@ -236,6 +238,8 @@ addColumn('challenges', 'last_reachable_at', 'TEXT');
 addColumn('challenges', 'published_at', 'TEXT');
 addColumn('challenges', 'locked_at', 'TEXT');
 addColumn('wireguard_peers', 'last_handshake_at', 'TEXT');
+addColumn('users', 'is_visitor', 'INTEGER NOT NULL DEFAULT 0');
+addColumn('users', 'is_test', 'INTEGER NOT NULL DEFAULT 0');
 db.exec("CREATE UNIQUE INDEX IF NOT EXISTS active_peer_user_type ON wireguard_peers(user_id, peer_type) WHERE status <> 'revoked';");
 db.exec("CREATE UNIQUE INDEX IF NOT EXISTS active_peer_ip ON wireguard_peers(assigned_ip) WHERE status <> 'revoked';");
 db.exec("CREATE UNIQUE INDEX IF NOT EXISTS active_peer_public_key ON wireguard_peers(public_key) WHERE public_key IS NOT NULL AND status <> 'revoked';");
@@ -333,10 +337,10 @@ function attachSession(req, res, next) {
   req.user = null;
   const token = cookieValue(req, 'mbc_las_sid');
   if (token) {
-    const row = db.prepare('SELECT s.*,u.caas_id,u.role,u.active FROM sessions s LEFT JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?').get(sha256(token), nowIso());
+    const row = db.prepare('SELECT s.*,u.caas_id,u.role,u.active,u.is_visitor,u.is_test FROM sessions s LEFT JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?').get(sha256(token), nowIso());
     if (row && (row.user_id == null || row.active)) {
       req.session = row;
-      if (row.user_id != null) req.user = { id: row.user_id, caasId: row.caas_id, role: row.role };
+      if (row.user_id != null) req.user = { id: row.user_id, caasId: row.caas_id, role: row.role, isVisitor: Boolean(row.is_visitor), isTest: Boolean(row.is_test) };
     }
   }
   next();
@@ -364,6 +368,11 @@ function confirmationMatches(req, expected) {
 }
 function requireAuth(req, res, next) {
   if (!req.user) return res.redirect('/login');
+  next();
+}
+function requireWriteAccess(req, res, next) {
+  if (!req.user) return res.redirect('/login');
+  if (req.user.isVisitor) return res.status(403).send(renderPage('Read-only account', notice('Read-only account', 'This visitor account can view the portal but cannot change event data.', 'info'), req));
   next();
 }
 function requireCurrentPassword(req, res, next) {
@@ -408,7 +417,7 @@ function confirmationField(label, expected) {
 function renderPage(title, content, req) {
   const user = req.user;
   const nav = user
-    ? '<a href="/setup">Setup</a><a href="/build">Build</a><a href="/lab-space">Lab Space</a><a href="/scoreboard">Scoreboard</a>' +
+    ? '<a href="/learn">Learn</a><a href="/setup">Setup</a><a href="/build">Build</a><a href="/lab-space">Lab Space</a><a href="/scoreboard">Scoreboard</a>' +
       (user.role === 'admin' ? '<a href="/admin">Admin</a>' : '') +
       '<form class="nav-form" method="post" action="/logout">' + csrfField(req) + '<button type="submit">Sign out</button></form>'
     : '<a href="/scoreboard">Scoreboard</a><a class="nav-cta" href="/login">Sign in</a>';
@@ -498,15 +507,16 @@ function setupCommand(token) {
 }
 function setupPage(req, type, token = '', error = '') {
   const peer = peerForUser(req.user.id, type);
+  const readOnly = Boolean(req.user?.isVisitor);
   const locked = type === 'target' && peerForUser(req.user.id, 'attacker')?.status !== 'connected';
   const title = type === 'attacker' ? 'Setup attacker' : 'Setup target';
   const osText = type === 'attacker' ? 'Kali Linux VM or Kali Linux WSL' : 'Ubuntu target VM or VPS';
   const initialStatus = locked ? 'locked' : peer?.status || 'not_started';
   let body = pageHead('SETUP / ' + type.toUpperCase(), title, osText);
-  body += '<div class="notice compact" data-setup-status data-peer-type="' + esc(type) + '" data-status="' + esc(initialStatus) + '"><strong data-status-value>' + (locked ? 'LOCKED' : peer?.status === 'connected' ? 'CONNECTED' : 'NOT CONNECTED') + '</strong><p>' +
-    (locked ? 'Complete attacker setup first.' : 'One ' + type + ' peer is assigned to this account.') + '</p><small>IP: <code data-status-ip>' + esc(peer?.assigned_ip || 'NOT ASSIGNED') + '</code> · Last verified: <span data-status-verified>' + esc(peer?.last_verified_at || 'NOT VERIFIED') + '</span></small></div>';
+  body += '<div class="notice compact" data-setup-status data-peer-type="' + esc(type) + '" data-status="' + esc(initialStatus) + '"><strong data-status-value>' + (readOnly ? 'READ-ONLY' : locked ? 'LOCKED' : peer?.status === 'connected' ? 'CONNECTED' : 'NOT CONNECTED') + '</strong><p>' +
+    (readOnly ? 'Visitor accounts can view setup guidance but cannot create or change peers.' : locked ? 'Complete attacker setup first.' : 'One ' + type + ' peer is assigned to this account.') + '</p><small>IP: <code data-status-ip>' + esc(peer?.assigned_ip || 'NOT ASSIGNED') + '</code> · Last verified: <span data-status-verified>' + esc(peer?.last_verified_at || 'NOT VERIFIED') + '</span></small></div>';
   if (error) body += '<div class="flash bad">' + esc(error) + '</div>';
-  if (!locked) {
+  if (!readOnly && !locked) {
     body += '<section class="step-panel"><div class="step-number">01</div><div><h2>Generate setup command</h2><p class="muted">The token expires in 10 minutes and can be used only once.</p><form method="post" action="/api/setup/' + type + '/token">' + csrfField(req) + formButton('GENERATE COMMAND') + '</form></div></section>';
     if (token) {
       body += '<section class="step-panel"><div class="step-number">02</div><div><h2>Run in ' + esc(type === 'attacker' ? 'Kali' : 'Ubuntu') + '</h2>' + commandBlock(setupCommand(token)) +
@@ -520,7 +530,10 @@ function setupPage(req, type, token = '', error = '') {
         '<form method="post" action="/api/setup/' + type + '/revoke" class="inline-form"><input name="current_password" type="password" autocomplete="current-password" placeholder="Account password" required>' + csrfField(req) + formButton('REVOKE PEER', 'danger') + '</form>' +
         '<form method="post" action="/api/setup/' + type + '/regenerate" class="inline-form"><input name="current_password" type="password" autocomplete="current-password" placeholder="Account password" required>' + csrfField(req) + formButton('REGENERATE PEER', 'ghost') + '</form></div></section>';
     }
+  } else if (readOnly) {
+    body += '<section class="callout"><strong>VIEW ONLY</strong><p>Setup commands and peer controls are disabled for this account.</p></section>';
   }
+  body += '<a class="button ghost" href="/setup">BACK TO SETUP</a>';
   return renderPage(title, body, req);
 }
 
@@ -727,7 +740,7 @@ function builderForm(req, values = {}, errors = [], result = null) {
     '<fieldset><legend>03 / INTENDED PATH <span class="legend-note">MENTOR ONLY</span></legend><label>Initial foothold summary<textarea name="initial_foothold_summary" maxlength="700" required>' + esc(values.initial_foothold_summary) + '</textarea></label><label>Enumeration clue<textarea name="enumeration_clue" maxlength="700" required>' + esc(values.enumeration_clue) + '</textarea></label><label>Privilege-escalation technique<input name="pe_technique" maxlength="200" required value="' + esc(values.pe_technique) + '" placeholder="SUID / sudo / cron"></label><label>Intended path<textarea name="intended_path" maxlength="1400" required>' + esc(values.intended_path) + '</textarea></label><label>Flag location summary<textarea name="flag_location_summary" maxlength="500" required>' + esc(values.flag_location_summary) + '</textarea></label></fieldset>' +
     '<fieldset><legend>04 / PLAYER VIEW</legend><label>Initial hint<input name="initial_hint" maxlength="400" required value="' + esc(values.initial_hint) + '" placeholder="Start with the service banner."></label><p class="muted">Do not include solver identity or solution details in player-facing text.</p></fieldset>' +
     '<fieldset><legend>05 / FLAG</legend><label>Flag<input name="flag" maxlength="120" required value="' + esc(values.flag) + '" placeholder="MBC{...}"></label><p class="muted">The flag is encrypted at rest and never shown to other players.</p></fieldset>' +
-    '<div class="form-actions">' + formButton('SAVE DRAFT') + '<button class="button ghost" type="submit" formaction="/build/challenge/check">RUN LIGHT CHECK</button><button class="button primary" type="submit" formaction="/build/challenge/submit">SUBMIT FOR REVIEW</button><a class="button ghost" href="/build/challenge/preview">PLAYER PREVIEW</a></div></form>';
+    '<div class="form-actions">' + formButton('SAVE DRAFT') + '<button class="button ghost" type="submit" formaction="/build/challenge/check">RUN LIGHT CHECK</button><button class="button primary" type="submit" formaction="/build/challenge/submit">SUBMIT FOR REVIEW</button><a class="button ghost" href="/build/challenge/preview">PLAYER PREVIEW</a><a class="button ghost" href="/build">BACK TO BUILD</a></div></form>';
   return renderPage('Build your lab', body, req);
 }
 function playerPreview(req, challenge, peer) {
@@ -882,7 +895,7 @@ app.post('/register', authLimiter, requireCsrf, (req, res) => {
       return info.lastInsertRowid;
     });
     clearSession(req);
-    req.user = { id: userId, caasId, role: 'participant' };
+    req.user = { id: userId, caasId, role: 'participant', isVisitor: false, isTest: false };
     createSession(req, userId);
     logEvent(req, 'account_activated', 'user', userId);
     res.redirect('/workspace');
@@ -912,7 +925,7 @@ app.post('/login', authLimiter, requireCsrf, (req, res) => {
     return res.status(401).send(renderPage('Sign in', loginForm(req, 'The credentials are invalid.', caasId), req));
   }
   clearSession(req);
-  req.user = { id: user.id, caasId: user.caas_id, role: user.role };
+  req.user = { id: user.id, caasId: user.caas_id, role: user.role, isVisitor: Boolean(user.is_visitor), isTest: Boolean(user.is_test) };
   createSession(req, user.id);
   db.prepare('UPDATE users SET last_login_at=? WHERE id=?').run(nowIso(), user.id);
   logEvent(req, 'login_success', 'user', user.id);
@@ -955,14 +968,16 @@ app.get('/setup', requireAuth, (req, res) => {
     '<div class="step-list">' +
     stepCard('01', 'ATTACKER', status.attacker?.status || 'not_started', 'Kali VM or Kali WSL.', '/setup/attacker') +
     stepCard('02', 'TARGET', status.target?.status || 'not_started', 'Ubuntu VM or optional VPS.', status.attacker?.status === 'connected' ? '/setup/target' : '') +
-    '</div><section class="callout"><strong>NETWORK RULE</strong><p>The portal may be public. Target IPs are reachable only through WireGuard.</p></section>';
+    '</div><section class="callout"><strong>NETWORK RULE</strong><p>The portal may be public. Target IPs are reachable only through WireGuard.</p></section>' +
+    (req.user.isVisitor ? '<section class="notice compact"><strong>READ-ONLY VISITOR</strong><p>Setup actions are disabled for this account.</p></section>' : '') +
+    '<a class="button ghost" href="/workspace">BACK TO WORKSPACE</a>';
   res.send(renderPage('Setup', content, req));
 });
 app.get('/setup/linux.sh', (req, res) => {
   res.type('text/plain').set('Cache-Control', 'no-store').set('Content-Disposition', 'inline; filename="mbc-las-w4-setup.sh"').send(installerScript());
 });
 app.get('/setup/:type', requireAuth, requirePeerTypeParam, (req, res) => res.set('Cache-Control', 'no-store').send(setupPage(req, req.params.type)));
-app.post('/api/setup/:type/token', requireAuth, requirePeerTypeParam, requireCsrf, enrollmentLimiter, (req, res) => {
+app.post('/api/setup/:type/token', requireAuth, requireWriteAccess, requirePeerTypeParam, requireCsrf, enrollmentLimiter, (req, res) => {
   const type = req.params.type;
   if (currentPhase() === 'LOCKED') return res.status(403).send(phaseError(req, 'Event locked', 'New peer enrollment is closed after the global lock.'));
   if (type === 'target' && peerForUser(req.user.id, 'attacker')?.status !== 'connected') return res.status(403).send(setupPage(req, type, '', 'The attacker peer must be connected first.'));
@@ -983,7 +998,7 @@ app.get('/api/setup/status', requireAuth, (req, res) => {
     phase: currentPhase(),
   });
 });
-app.post('/api/setup/:type/revoke', requireAuth, requirePeerTypeParam, requireCsrf, requireCurrentPassword, (req, res) => {
+app.post('/api/setup/:type/revoke', requireAuth, requireWriteAccess, requirePeerTypeParam, requireCsrf, requireCurrentPassword, (req, res) => {
   const peer = peerForUser(req.user.id, req.params.type);
   if (!peer) return res.redirect('/setup/' + req.params.type);
   if (peer.public_key) {
@@ -995,7 +1010,7 @@ app.post('/api/setup/:type/revoke', requireAuth, requirePeerTypeParam, requireCs
   logEvent(req, 'peer_revoked', 'peer', peer.id, { peerType: peer.peer_type });
   res.redirect('/setup/' + req.params.type);
 });
-app.post('/api/setup/:type/regenerate', requireAuth, requirePeerTypeParam, requireCsrf, requireCurrentPassword, (req, res) => {
+app.post('/api/setup/:type/regenerate', requireAuth, requireWriteAccess, requirePeerTypeParam, requireCsrf, requireCurrentPassword, (req, res) => {
   if (currentPhase() === 'LOCKED') return res.status(403).send(phaseError(req, 'Event locked', 'Peer regeneration is closed after the global lock.'));
   const peer = peerForUser(req.user.id, req.params.type);
   if (peer) {
@@ -1108,7 +1123,7 @@ function reviewDetail(req, challenge, noticeText = '') {
   body += '<div class="stats">' + stat('Owner', challenge.caas_id, challenge.status) + stat('Target', challenge.peer_ip || challenge.target_ip, challenge.target_status || 'not assigned') + stat('Light check', challenge.validation_status, challenge.health_status) + '</div>';
   body += '<section class="card"><span class="kicker">PLAYER-FACING</span><h2>' + esc(challenge.title) + '</h2><p>' + nl2br(challenge.description) + '</p><p><strong>Initial hint:</strong> ' + nl2br(challenge.initial_hint) + '</p><div class="service-table">' + reviewServices(challenge.services) + '</div></section>';
   body += '<section class="card"><span class="kicker">MENTOR-ONLY</span><h2>Intended path</h2><dl><dt>Learning objective</dt><dd>' + nl2br(challenge.learning_objective) + '</dd><dt>Initial foothold</dt><dd>' + nl2br(challenge.initial_foothold_summary) + '</dd><dt>Enumeration clue</dt><dd>' + nl2br(challenge.enumeration_clue) + '</dd><dt>PE technique</dt><dd>' + nl2br(challenge.pe_technique) + '</dd><dt>Intended path</dt><dd>' + nl2br(challenge.intended_path) + '</dd><dt>Flag location</dt><dd>' + nl2br(challenge.flag_location_summary) + '</dd></dl></section>';
-  body += '<section class="card"><span class="kicker">DECISION</span><p>Status: <strong>' + esc(challenge.status) + '</strong>. Validation: <strong>' + esc(challenge.validation_status) + '</strong>. Health: <strong>' + esc(challenge.health_status) + '</strong>.</p><div class="admin-actions"><form method="post" action="/admin/review/' + challenge.id + '/recheck">' + csrfField(req) + formButton('RECHECK TARGET', 'ghost') + '</form><form method="post" action="/admin/review/' + challenge.id + '/approve">' + csrfField(req) + '<input type="hidden" name="reviewer_note" value="Approved by mentor.">' + formButton('APPROVE / PUBLISH') + '</form><form method="post" action="/admin/review/' + challenge.id + '/return" class="note-form">' + csrfField(req) + '<input name="reviewer_note" maxlength="1000" required placeholder="Required revision note"><button class="button danger" type="submit">RETURN TO AUTHOR</button></form>' + reviewAvailabilityActions(req, challenge) + '</div></section>';
+  body += '<section class="card"><span class="kicker">DECISION</span><p>Status: <strong>' + esc(challenge.status) + '</strong>. Validation: <strong>' + esc(challenge.validation_status) + '</strong>. Health: <strong>' + esc(challenge.health_status) + '</strong>.</p><div class="admin-actions"><form method="post" action="/admin/review/' + challenge.id + '/recheck">' + csrfField(req) + formButton('RECHECK TARGET', 'ghost') + '</form><form method="post" action="/admin/review/' + challenge.id + '/approve">' + csrfField(req) + '<input type="hidden" name="reviewer_note" value="Approved by mentor.">' + formButton('APPROVE / PUBLISH') + '</form><form method="post" action="/admin/review/' + challenge.id + '/return" class="note-form">' + csrfField(req) + '<input name="reviewer_note" maxlength="1000" required placeholder="Required revision note"><button class="button danger" type="submit">RETURN TO AUTHOR</button></form>' + reviewAvailabilityActions(req, challenge) + '</div></section><a class="button ghost" href="/admin/review">BACK TO REVIEW QUEUE</a>';
   return renderPage('Admin review', body, req);
 }
 
@@ -1118,13 +1133,14 @@ app.get('/admin', requireAdmin, (req, res) => {
   const degraded = db.prepare("SELECT COUNT(*) AS count FROM challenges WHERE health_status='degraded'").get().count;
   const content = pageHead('ADMIN / OPERATIONS', 'Review queue', 'Approve only labs that pass the deterministic Light Check.') +
     '<div class="stats">' + stat('Pending review', String(pending), 'needs mentor decision') + stat('Approved', String(approved), 'published when live') + stat('Degraded', String(degraded), 'target IP unreachable') + '</div>' +
-    '<div class="admin-actions"><a class="button primary" href="/admin/review">OPEN REVIEW QUEUE</a><a class="button ghost" href="/admin/peers">PEERS</a><a class="button ghost" href="/admin/health">HEALTH</a><a class="button ghost" href="/admin/event">EVENT</a><a class="button ghost" href="/admin/audit">AUDIT</a></div><div class="security-callout"><strong>PRIVATE ROUTE</strong><span>Admin access requires the admin account and a source inside the WireGuard or Tailscale network.</span></div>';
+    '<div class="admin-actions"><a class="button primary" href="/admin/review">OPEN REVIEW QUEUE</a><a class="button ghost" href="/admin/peers">PEERS</a><a class="button ghost" href="/admin/health">HEALTH</a><a class="button ghost" href="/admin/event">EVENT</a><a class="button ghost" href="/admin/audit">AUDIT</a></div><div class="security-callout"><strong>PRIVATE ROUTE</strong><span>Admin access requires the admin account and a source inside the WireGuard or Tailscale network.</span></div><a class="button ghost" href="/learn">OPEN LEARN</a>';
   res.send(renderPage('Admin', content, req));
 });
 app.get('/admin/review', requireAdmin, (req, res) => {
   const rows = db.prepare("SELECT c.id,c.title,c.status,c.validation_status,c.health_status,c.updated_at,u.caas_id FROM challenges c JOIN users u ON u.id=c.owner_user_id WHERE c.status='pending_review' ORDER BY c.updated_at ASC").all();
   let content = pageHead('ADMIN / REVIEW', 'Pending labs', 'Review the owner, target status, player view, and intended path.');
   content += rows.length ? '<div class="admin-list">' + rows.map((row) => '<article class="admin-card"><div class="step-top"><span class="kicker">LAB ' + String(row.id).padStart(2, '0') + '</span>' + statusBadge(row.validation_status) + '</div><h2>' + esc(row.title) + '</h2><p>Owner: <strong>' + esc(row.caas_id) + '</strong></p><div class="admin-grid"><span><small>STATUS</small><strong>' + esc(row.status) + '</strong></span><span><small>HEALTH</small><strong>' + esc(row.health_status) + '</strong></span></div><a class="button ghost small" href="/admin/review/' + row.id + '">OPEN REVIEW</a></article>').join('') + '</div>' : '<div class="empty"><h2>Queue empty</h2><p>No pending challenge requires a decision.</p></div>';
+  content += '<a class="button ghost" href="/admin">BACK TO ADMIN</a>';
   res.send(renderPage('Review queue', content, req));
 });
 app.get('/admin/review/:id', requireAdmin, (req, res) => {
@@ -1185,6 +1201,7 @@ app.get('/admin/peers', requireAdmin, (req, res) => {
   const rows = db.prepare("SELECT p.*,u.caas_id FROM wireguard_peers p JOIN users u ON u.id=p.user_id ORDER BY p.peer_type,p.assigned_ip,p.id").all();
   let content = pageHead('ADMIN / PEERS', 'Peer inventory', 'Review allocations and revoke a compromised peer. Public keys are never private keys.');
   content += rows.length ? '<div class="ops-table"><div class="ops-row ops-head"><span>PEER</span><span>OWNER</span><span>IP</span><span>STATUS</span><span>VERIFIED</span><span>ACTION</span></div>' + rows.map((row) => '<div class="ops-row"><span><strong>' + esc(row.peer_type.toUpperCase()) + '</strong><small>' + esc(row.id) + '</small></span><span>' + esc(row.caas_id) + '</span><code>' + esc(row.assigned_ip) + '</code><span>' + statusBadge(row.status) + '</span><span>' + esc(row.last_verified_at || 'NOT VERIFIED') + '</span><span>' + (row.status === 'revoked' ? '<span class="muted">REVOKED</span>' : '<form method="post" action="/admin/peers/' + row.id + '/revoke" class="inline-form">' + csrfField(req) + confirmationField('Type REVOKE', 'REVOKE') + formButton('REVOKE', 'danger') + '</form>') + '</span></div>').join('') + '</div>' : '<div class="empty"><h2>No peers</h2><p>Peer allocations appear after participant setup.</p></div>';
+  content += '<a class="button ghost" href="/admin">BACK TO ADMIN</a>';
   res.send(renderPage('Peer inventory', content, req));
 });
 app.post('/admin/peers/:id/revoke', requireAdmin, requireCsrf, (req, res) => {
@@ -1212,7 +1229,7 @@ app.get('/admin/health', requireAdmin, async (req, res) => {
   let content = pageHead('ADMIN / HEALTH', 'Target health', 'Only target-IP reachability can change a lab to DEGRADED: stale handshake plus three spaced probe failures.');
   content += '<div class="stats">' + stat('Targets', String(rows.length), 'approved or locked labs') + stat('Degraded', String(rows.filter((row) => row.health_status === 'degraded').length), 'threshold reached') + stat('Checks', String(rows.filter((row) => row.health?.checked).length), 'new checks this visit') + '</div>';
   content += rows.length ? '<div class="ops-table"><div class="ops-row ops-head"><span>LAB</span><span>OWNER</span><span>TARGET</span><span>HEALTH</span><span>LAST PROBE</span><span>ACTION</span></div>' + rows.map((row) => '<div class="ops-row"><span><strong>' + esc(row.title) + '</strong><small>' + esc(row.id) + '</small></span><span>' + esc(row.caas_id) + '</span><code>' + esc(row.peer_assigned_ip || row.target_ip) + '</code><span>' + statusBadge(row.health_status) + '<small>' + esc(row.health_detail || 'NO DETAIL') + '</small></span><span>' + esc(row.latest ? row.latest.status.toUpperCase() + ' · ' + row.latest.created_at : 'NOT CHECKED') + '</span><span><form method="post" action="/admin/challenges/' + row.id + '/recheck" class="inline-form">' + csrfField(req) + formButton('RECHECK', 'ghost') + '</form><a class="button ghost small" href="/admin/review/' + row.id + '">REVIEW</a></span></div>').join('') + '</div>' : '<div class="empty"><h2>No target labs</h2><p>Approved labs will appear here.</p></div>';
-  content += '<p class="score-note">' + esc(cfg.skipNetworkChecks ? 'Development mode: target probe is a safe pass-through; production must set SKIP_NETWORK_CHECKS=false and provide helper status.' : 'Probe attempts are throttled to the configured interval. Service-port failures never mark a lab degraded.') + '</p>';
+  content += '<p class="score-note">' + esc(cfg.skipNetworkChecks ? 'Development mode: target probe is a safe pass-through; production must set SKIP_NETWORK_CHECKS=false and provide helper status.' : 'Probe attempts are throttled to the configured interval. Service-port failures never mark a lab degraded.') + '</p><a class="button ghost" href="/admin">BACK TO ADMIN</a>';
   res.send(renderPage('Target health', content, req));
 });
 
@@ -1222,7 +1239,7 @@ app.get('/admin/event', requireAdmin, (req, res) => {
   let content = pageHead('ADMIN / EVENT', 'Event controls', 'Server-enforced phase gates. Lock is global and cannot be undone from the portal.');
   content += '<div class="stats">' + stat('Current phase', phase, forced === 'AUTO' ? 'schedule' : 'forced: ' + forced) + stat('Portal open', formatWhen(cfg.portalOpenAt), 'Lab Space') + stat('Game lock', formatWhen(cfg.gameLockAt), 'flags + scoreboard') + '</div>';
   content += '<section class="card"><h2>Schedule</h2><dl><dt>Build cutoff</dt><dd>' + esc(formatWhen(cfg.buildDeadlineAt)) + '</dd><dt>Submission deadline</dt><dd>' + esc(formatWhen(cfg.submissionDeadlineAt)) + '</dd><dt>Portal open</dt><dd>' + esc(formatWhen(cfg.portalOpenAt)) + '</dd><dt>Lock</dt><dd>' + esc(formatWhen(cfg.gameLockAt)) + '</dd></dl></section>';
-  content += '<section class="card"><h2>Authority actions</h2><div class="admin-actions"><form method="post" action="/admin/event/open">' + csrfField(req) + confirmationField('Type OPEN', 'OPEN') + formButton('OPEN LAB SPACE') + '</form><form method="post" action="/admin/event/lock">' + csrfField(req) + confirmationField('Type LOCK', 'LOCK') + formButton('LOCK EVENT', 'danger') + '</form></div></section>';
+  content += '<section class="card"><h2>Authority actions</h2><div class="admin-actions"><form method="post" action="/admin/event/open">' + csrfField(req) + confirmationField('Type OPEN', 'OPEN') + formButton('OPEN LAB SPACE') + '</form><form method="post" action="/admin/event/lock">' + csrfField(req) + confirmationField('Type LOCK', 'LOCK') + formButton('LOCK EVENT', 'danger') + '</form></div></section><a class="button ghost" href="/admin">BACK TO ADMIN</a>';
   res.send(renderPage('Event controls', content, req));
 });
 app.post('/admin/event/open', requireAdmin, requireCsrf, (req, res) => {
@@ -1245,6 +1262,7 @@ app.get('/admin/audit', requireAdmin, (req, res) => {
   logEvent(req, 'audit_viewed', 'audit', null, { rowCount: rows.length });
   let content = pageHead('ADMIN / AUDIT', 'Audit trail', 'Recent security, enrollment, peer, review, health, and event actions.');
   content += rows.length ? '<div class="audit-table"><div class="audit-row audit-head"><span>TIME</span><span>ACTOR</span><span>ACTION</span><span>TARGET</span><span>DETAIL</span></div>' + rows.map((row) => '<div class="audit-row"><span>' + esc(row.created_at) + '</span><span>' + esc(row.caas_id || 'SYSTEM') + '</span><strong>' + esc(row.action) + '</strong><span>' + esc([row.target_type, row.target_id].filter(Boolean).join(' / ') || '—') + '</span><code>' + esc(row.details || '') + '</code></div>').join('') + '</div>' : '<div class="empty"><h2>No audit entries</h2><p>Security actions will appear here.</p></div>';
+  content += '<a class="button ghost" href="/admin">BACK TO ADMIN</a>';
   res.send(renderPage('Audit trail', content, req));
 });
 
@@ -1268,12 +1286,15 @@ app.get('/build', requireAuth, (req, res) => {
   const target = peerForUser(req.user.id, 'target');
   let content = pageHead('BUILD / OWN LAB', 'Your lab', 'One challenge per CaAs. Complete and validate it directly in the portal.');
   content += '<div class="stats">' + stat('Target', target?.assigned_ip || 'not assigned', target?.status || 'setup required') + stat('Challenge', challenge?.status || 'not started', challenge?.validation_status || 'not checked') + stat('Health', challenge?.health_status || 'unknown', challenge?.health_detail || 'IP-level status') + '</div>';
-  if (!target || target.status !== 'connected') content += notice('Target not connected', 'Complete target setup before opening the builder.', 'info');
+  if (req.user.isVisitor) content += notice('Read-only account', 'Visitor accounts can inspect the build area but cannot create or edit challenges.', 'info');
+  else if (!target || target.status !== 'connected') content += notice('Target not connected', 'Complete target setup before opening the builder.', 'info');
   else if (!challenge) content += '<section class="empty"><h2>No draft yet</h2><p>Create your first challenge in the builder.</p><a class="button primary" href="/build/challenge">START BUILD</a></section>';
   else content += '<section class="card"><div class="step-top"><span class="kicker">CURRENT DRAFT</span>' + statusBadge(challenge.status) + '</div><h2>' + esc(challenge.title) + '</h2><p class="muted">' + esc(challenge.description) + '</p><div class="inline-actions"><a class="button primary" href="/build/challenge">EDIT BUILDER</a><form method="post" action="/build/challenge/recheck">' + csrfField(req) + formButton('RECHECK TARGET', 'ghost') + '</form></div></section>';
+  content += '<a class="button ghost" href="/workspace">BACK TO WORKSPACE</a>';
   res.send(renderPage('Build', content, req));
 });
 app.get('/build/challenge', requireAuth, (req, res) => {
+  if (req.user.isVisitor) return res.status(403).send(renderPage('Builder unavailable', notice('Builder unavailable', 'Visitor accounts are read-only and cannot open the challenge editor.', 'info') + '<a class="button ghost" href="/build">BACK TO BUILD</a>', req));
   const target = peerForUser(req.user.id, 'target');
   if (!target || target.status !== 'connected') return res.status(403).send(renderPage('Builder locked', notice('Builder locked', 'The target peer must be connected first.', 'info'), req));
   const challenge = ownChallenge(req.user.id);
@@ -1286,14 +1307,14 @@ app.get('/build/challenge/preview', requireAuth, (req, res) => {
   if (!challenge || !peer) return res.status(404).send(renderPage('Preview unavailable', notice('Preview unavailable', 'Save a draft after target setup first.', 'bad'), req));
   res.send(playerPreview(req, challenge, peer));
 });
-app.post('/build/challenge/save', requireAuth, requireCsrf, requireBuilderWrite, (req, res) => {
+app.post('/build/challenge/save', requireAuth, requireWriteAccess, requireCsrf, requireBuilderWrite, (req, res) => {
   const values = builderValues(req, ownChallenge(req.user.id));
   const result = saveChallenge(req, values);
   if (result.errors) return res.status(400).send(builderForm(req, values, result.errors));
   logEvent(req, 'challenge_saved', 'challenge', result.challenge.id, { status: 'draft' });
   res.redirect('/build');
 });
-app.post('/build/challenge/check', requireAuth, requireCsrf, requireBuilderWrite, async (req, res) => {
+app.post('/build/challenge/check', requireAuth, requireWriteAccess, requireCsrf, requireBuilderWrite, async (req, res) => {
   const values = builderValues(req, ownChallenge(req.user.id));
   const saved = saveChallenge(req, values);
   if (saved.errors) return res.status(400).send(builderForm(req, values, saved.errors));
@@ -1301,7 +1322,7 @@ app.post('/build/challenge/check', requireAuth, requireCsrf, requireBuilderWrite
   const items = result.ok ? ['Target IP reachable.', 'Declared fields valid.', 'Challenge is ready for mentor review.'] : result.failures;
   res.status(result.ok ? 200 : 400).send(builderForm(req, values, [], { ok: result.ok, title: result.ok ? 'LIGHT CHECK PASSED' : 'LIGHT CHECK FAILED', items }));
 });
-app.post('/build/challenge/submit', requireAuth, requireCsrf, requireBuilderWrite, async (req, res) => {
+app.post('/build/challenge/submit', requireAuth, requireWriteAccess, requireCsrf, requireBuilderWrite, async (req, res) => {
   if (!isBefore(Date.now(), cfg.buildDeadlineAt)) return res.status(403).send(phaseError(req, 'Review queue closed', 'Challenges must be submitted before ' + formatWhen(cfg.buildDeadlineAt) + '.'));
   const values = builderValues(req, ownChallenge(req.user.id));
   const saved = saveChallenge(req, values);
@@ -1312,7 +1333,7 @@ app.post('/build/challenge/submit', requireAuth, requireCsrf, requireBuilderWrit
   logEvent(req, 'challenge_submitted_for_review', 'challenge', saved.challenge.id);
   res.redirect('/build');
 });
-app.post('/build/challenge/recheck', requireAuth, requireCsrf, async (req, res) => {
+app.post('/build/challenge/recheck', requireAuth, requireWriteAccess, requireCsrf, async (req, res) => {
   const challenge = ownChallenge(req.user.id);
   const peer = peerForUser(req.user.id, 'target');
   if (!challenge || !peer) return res.redirect('/build');
@@ -1330,7 +1351,7 @@ function challengePublicCard(challenge, req) {
   return '<article class="challenge-card"><div class="step-top"><span class="kicker">LAB ' + String(challenge.id).padStart(2, '0') + '</span>' + statusBadge(challenge.health_status) + '</div><h2>' + esc(challenge.title) + '</h2><p>' + nl2br(challenge.description) + '</p><div class="challenge-meta"><span><small>TARGET</small><code>' + esc(challenge.target_ip) + '</code></span><span><small>SOLVERS</small><strong>' + esc(solverCount) + '</strong></span></div><a class="button ghost small" href="/lab-space/' + challenge.id + '">' + (solved ? 'VIEW SOLVED' : 'OPEN LAB') + '</a></article>';
 }
 function scoreboardRows() {
-  return db.prepare("SELECT id,caas_id FROM users WHERE role='participant' AND active=1 ORDER BY caas_id").all()
+  return db.prepare("SELECT id,caas_id FROM users WHERE role='participant' AND active=1 AND COALESCE(is_visitor,0)=0 AND COALESCE(is_test,0)=0 ORDER BY caas_id").all()
     .map((user) => ({ user, score: scoreForSolved(db.prepare('SELECT correct,first_blood,submitted_at FROM submissions WHERE user_id=?').all(user.id)) }))
     .sort((left, right) => {
       if (right.score.points !== left.score.points) return right.score.points - left.score.points;
@@ -1358,6 +1379,7 @@ app.get('/lab-space', requireAuth, (req, res) => {
     const rows = db.prepare("SELECT * FROM challenges WHERE status IN ('approved','locked') AND health_status<>'disabled' ORDER BY id").all();
     content += rows.length ? '<div class="challenge-grid">' + rows.map((challenge) => challengePublicCard(challenge, req)).join('') + '</div>' : '<div class="empty"><h2>No labs yet</h2><p>Waiting for mentor approval.</p></div>';
   }
+  content += '<a class="button ghost" href="/workspace">BACK TO WORKSPACE</a>';
   res.send(renderPage('Lab Space', content, req));
 });
 app.get('/lab-space/:id', requireAuth, (req, res) => {
@@ -1370,14 +1392,16 @@ app.get('/lab-space/:id', requireAuth, (req, res) => {
   content += '<div class="target-banner"><span class="kicker">TARGET IP</span><strong>' + esc(challenge.target_ip) + '</strong><button type="button" class="copy-button inline" data-copy="' + esc(challenge.target_ip) + '">COPY IP</button>' + statusBadge(challenge.health_status) + '</div>';
   content += '<section class="card"><h2>Services</h2><div class="service-table">' + services.map((service) => '<div><code>' + esc(service.port + '/' + service.protocol) + '</code><strong>' + esc(service.label) + '</strong><span>' + esc(service.note || '') + '</span></div>').join('') + '</div><details><summary>COMMANDS</summary>' + services.map((service) => commandBlock('nmap -sV -p ' + service.port + ' ' + challenge.target_ip)).join('') + '</details></section>';
   content += '<section class="card"><h2>Challenge</h2><p>' + nl2br(challenge.description) + '</p><details><summary>INITIAL HINT</summary><p>' + nl2br(challenge.initial_hint) + '</p></details></section>';
-  if (own) content += '<div class="callout danger"><strong>SELF-SOLVE BLOCKED</strong><p>Challenge owners cannot submit flags for their own lab.</p></div>';
+  if (req.user.isVisitor) content += '<div class="callout"><strong>READ-ONLY VISITOR</strong><p>Visitor accounts can inspect labs but cannot submit flags or reports.</p></div>';
+  else if (own) content += '<div class="callout danger"><strong>SELF-SOLVE BLOCKED</strong><p>Challenge owners cannot submit flags for their own lab.</p></div>';
   else if (currentPhase() === 'LOCKED') content += '<div class="notice compact"><strong>LOCKED</strong><p>Leaderboard and flag submissions are frozen.</p></div>';
   else if (solved) content += '<div class="notice compact good"><strong>SOLVED</strong><p>Your flag has already been recorded.</p></div>';
   else content += '<form method="post" action="/lab-space/' + challenge.id + '/flag" class="flag-form">' + csrfField(req) + '<label>Submit flag<input name="flag" maxlength="120" autocomplete="off" placeholder="MBC{...}" required></label>' + formButton('SUBMIT FLAG') + '</form>';
-  if (currentPhase() === 'LIVE') content += '<form method="post" action="/lab-space/' + challenge.id + '/report" class="report-form">' + csrfField(req) + formButton('REPORT UNREACHABLE', 'danger') + '</form>';
+  if (currentPhase() === 'LIVE' && !req.user.isVisitor) content += '<form method="post" action="/lab-space/' + challenge.id + '/report" class="report-form">' + csrfField(req) + formButton('REPORT UNREACHABLE', 'danger') + '</form>';
+  content += '<a class="button ghost" href="/lab-space">BACK TO LAB SPACE</a>';
   res.send(renderPage(challenge.title, content, req));
 });
-app.post('/lab-space/:id/flag', submitLimiter, requireAuth, requireCsrf, requireLive, (req, res) => {
+app.post('/lab-space/:id/flag', submitLimiter, requireAuth, requireWriteAccess, requireCsrf, requireLive, (req, res) => {
   const id = Number(req.params.id);
   const challenge = db.prepare("SELECT * FROM challenges WHERE id=? AND status='approved' AND health_status<>'disabled'").get(id);
   if (!challenge) return res.status(404).send(renderPage('Unavailable', notice('Unavailable', 'Challenge is not available.', 'bad'), req));
@@ -1394,7 +1418,7 @@ app.post('/lab-space/:id/flag', submitLimiter, requireAuth, requireCsrf, require
   logEvent(req, correct ? 'flag_correct' : 'flag_incorrect', 'challenge', id, { firstBlood });
   res.status(correct ? 200 : 400).send(renderPage(correct ? 'Flag accepted' : 'Flag rejected', notice(correct ? 'Flag accepted' : 'Flag rejected', correct ? (firstBlood ? 'Correct. First blood +10. Total +110.' : 'Correct. +100 points.') : 'Not correct yet. Preserve your evidence chain and try again.', correct ? 'good' : 'bad'), req));
 });
-app.post('/lab-space/:id/report', submitLimiter, requireAuth, requireCsrf, requireLive, async (req, res) => {
+app.post('/lab-space/:id/report', submitLimiter, requireAuth, requireWriteAccess, requireCsrf, requireLive, async (req, res) => {
   const challenge = db.prepare("SELECT * FROM challenges WHERE id=? AND status='approved'").get(Number(req.params.id));
   if (!challenge) return res.status(404).send(renderPage('Unavailable', notice('Unavailable', 'Challenge is not available.', 'bad'), req));
   const recent = db.prepare('SELECT id FROM lab_issue_reports WHERE challenge_id=? AND reporter_id=? AND created_at>?').get(challenge.id, req.user.id, new Date(Date.now() - 10 * 60 * 1000).toISOString());
