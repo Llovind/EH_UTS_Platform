@@ -343,6 +343,9 @@ test('admin review is protected by WireGuard source and redacts flag material fr
   assert.equal(review.status, 200);
   assert.match(reviewText, /CAAS-REVIEW/);
   assert.match(reviewText, /Follow the intended path/);
+  assert.match(reviewText, /Mentor notes/);
+  assert.doesNotMatch(reviewText, /Learning objective|Initial foothold|Enumeration clue|PE technique|Flag location/);
+  assert.doesNotMatch(reviewText, /Evidence objective|Non-root shell|Check permissions|Flag in controlled location/);
   assert.match(reviewText, /review-content/);
   assert.match(reviewText, /review-actions-availability/);
   assert.doesNotMatch(reviewText, /hidden-flag-hash|hidden-encrypted/);
