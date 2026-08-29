@@ -237,6 +237,8 @@ test('runnable setup surface exposes health, public installer, and enrollment se
   assert.equal(builderPage.status, 200);
   const builderCsrf = csrfFrom(builderPageText);
   assert.doesNotMatch(builderPageText, /recovery|reset/i);
+  assert.match(builderPageText, /MENTOR NOTES/);
+  assert.doesNotMatch(builderPageText, /Learning objective|Initial foothold summary|Enumeration clue|Privilege-escalation technique|Flag location summary/);
   const learnPage = await fetch(base + '/learn', { headers: { cookie } });
   const learnText = await learnPage.text();
   assert.equal(learnPage.status, 200);
@@ -246,10 +248,8 @@ test('runnable setup surface exposes health, public installer, and enrollment se
   const builderEntries = [
     ['_csrf', builderCsrf], ['title', 'Quiet Backup'],
     ['description', 'A controlled Linux privilege escalation lab for evidence practice.'],
-    ['learning_objective', 'Practice evidence-led enumeration.'], ['initial_hint', 'Start with the service banner.'],
-    ['initial_foothold_summary', 'A non-root shell is provided.'], ['enumeration_clue', 'Review writable privileged paths.'],
-    ['pe_technique', 'SUID'], ['intended_path', 'Enumerate the SUID binary and validate its input boundary.'],
-    ['flag_location_summary', 'The flag is stored under the intended path.'], ['flag', 'MBC{test_flag}'],
+    ['mentor_notes', 'Enumerate the SUID binary, validate its input boundary, and use it to read the flag.'],
+    ['flag', 'MBC{test_flag}'],
     ['service_port', '22'], ['service_protocol', 'tcp'], ['service_label', 'SSH'], ['service_note', 'Remote shell'],
     ['service_port', '80'], ['service_protocol', 'tcp'], ['service_label', 'HTTP'], ['service_note', 'Web clue'],
     ['service_port', '8080'], ['service_protocol', 'tcp'], ['service_label', 'App'], ['service_note', 'Challenge service'],

@@ -711,21 +711,33 @@ function parseStoredServices(value) {
   }
 }
 
+const BUILDER_DEFAULTS = Object.freeze({
+  learning_objective: 'Practice evidence-led enumeration and privilege escalation.',
+  initial_hint: 'Start with service discovery and record each finding.',
+  initial_foothold_summary: 'Use one declared service to obtain a controlled non-root foothold.',
+  enumeration_clue: 'Enumerate exposed services, identities, permissions, and writable paths.',
+  pe_technique: 'To be confirmed during mentor review.',
+  flag_location_summary: 'Place the flag at the end of the intended path and record its location for review.',
+  intended_path: 'Document the intended enumeration-to-privilege-escalation path and the evidence a solver should collect.',
+});
+
 function builderValues(req, challenge = null) {
   const postedServiceFields = ['service_port', 'service_protocol', 'service_label', 'service_note']
     .some((field) => Object.prototype.hasOwnProperty.call(req.body || {}, field));
+  const postedMentorNotes = Object.prototype.hasOwnProperty.call(req.body || {}, 'mentor_notes');
   const services = postedServiceFields ? parseServices(req) : challenge ? parseStoredServices(challenge.services) : parseServices(req);
-  const postedValue = (key, stored = '') => Object.prototype.hasOwnProperty.call(req.body || {}, key) ? input(req, key) : stored;
+  const postedValue = (key, stored = BUILDER_DEFAULTS[key] || '') => Object.prototype.hasOwnProperty.call(req.body || {}, key) ? input(req, key) : stored;
+  const intendedPath = postedMentorNotes ? input(req, 'mentor_notes') : postedValue('intended_path', challenge?.intended_path || '');
   return {
     title: postedValue('title', challenge?.title || ''),
     description: postedValue('description', challenge?.description || ''),
-    learning_objective: postedValue('learning_objective', challenge?.learning_objective || ''),
-    initial_hint: postedValue('initial_hint', challenge?.initial_hint || ''),
-    initial_foothold_summary: postedValue('initial_foothold_summary', challenge?.initial_foothold_summary || ''),
-    enumeration_clue: postedValue('enumeration_clue', challenge?.enumeration_clue || ''),
-    pe_technique: postedValue('pe_technique', challenge?.pe_technique || ''),
-    intended_path: postedValue('intended_path', challenge?.intended_path || ''),
-    flag_location_summary: postedValue('flag_location_summary', challenge?.flag_location_summary || ''),
+    learning_objective: postedValue('learning_objective', challenge?.learning_objective || BUILDER_DEFAULTS.learning_objective),
+    initial_hint: postedValue('initial_hint', challenge?.initial_hint || BUILDER_DEFAULTS.initial_hint),
+    initial_foothold_summary: postedValue('initial_foothold_summary', challenge?.initial_foothold_summary || BUILDER_DEFAULTS.initial_foothold_summary),
+    enumeration_clue: postedValue('enumeration_clue', challenge?.enumeration_clue || BUILDER_DEFAULTS.enumeration_clue),
+    pe_technique: postedValue('pe_technique', challenge?.pe_technique || BUILDER_DEFAULTS.pe_technique),
+    intended_path: intendedPath,
+    flag_location_summary: postedValue('flag_location_summary', challenge?.flag_location_summary || BUILDER_DEFAULTS.flag_location_summary),
     flag: postedValue('flag', challenge?.flag_encrypted ? decryptSecret(challenge.flag_encrypted, cfg.appKey) : ''),
     services,
   };
@@ -735,9 +747,10 @@ function validateBuilder(values, peer) {
   if (!peer || peer.peer_type !== 'target' || peer.status !== 'connected') errors.push('The target peer must be connected first.');
   if (values.title.length < 3 || values.title.length > 100) errors.push('The title must be 3-100 characters.');
   if (values.description.length < 20 || values.description.length > 1200) errors.push('The description must be 20-1200 characters.');
-  if (values.learning_objective.length < 10 || values.learning_objective.length > 300) errors.push('The learning objective must be 10-300 characters.');
-  if (values.initial_hint.length < 5 || values.initial_hint.length > 400) errors.push('The initial hint must be 5-400 characters.');
-  if (values.initial_foothold_summary.length < 5 || values.enumeration_clue.length < 5 || values.pe_technique.length < 3 || values.intended_path.length < 10 || values.flag_location_summary.length < 5) errors.push('Complete every intended-path field for mentor review.');
+  if (values.learning_objective.length > 300) errors.push('The learning objective must be 300 characters or fewer.');
+  if (values.initial_hint.length > 400) errors.push('The initial hint must be 400 characters or fewer.');
+  if (values.initial_foothold_summary.length > 700 || values.enumeration_clue.length > 700 || values.pe_technique.length > 200 || values.flag_location_summary.length > 500) errors.push('Generated mentor metadata exceeds its storage limit.');
+  if (values.intended_path.length < 10 || values.intended_path.length > 1400) errors.push('Add mentor solution/path notes in 10-1400 characters.');
   if (!validFlag(values.flag)) errors.push('The flag must use the case-sensitive MBC{...} format.');
   if (values.services.length < 3) errors.push('List at least three services.');
   const seen = new Set();
@@ -756,20 +769,19 @@ function validateBuilder(values, peer) {
 function builderForm(req, values = {}, errors = [], result = null) {
   const peer = peerForUser(req.user.id, 'target');
   const services = values.services?.length ? values.services : [{ port: '', protocol: 'tcp', label: '', note: '' }, { port: '', protocol: 'tcp', label: '', note: '' }, { port: '', protocol: 'tcp', label: '', note: '' }];
-  let body = pageHead('BUILD / CHALLENGE', 'Build your lab', 'Complete the form in the portal. Your owner ID and target peer are linked automatically.');
+  let body = pageHead('BUILD / CHALLENGE', 'Build your lab', 'Provide the essentials. Review metadata is filled with safe defaults automatically.');
   body += '<div class="builder-meta"><span>TARGET PEER</span><strong>' + esc(peer?.assigned_ip || 'NOT ASSIGNED') + '</strong>' + statusBadge(peer?.status || 'not_started') + '</div>';
   if (errors.length) body += '<div class="flash bad"><strong>Review these items:</strong><ul>' + errors.map((error) => '<li>' + esc(error) + '</li>').join('') + '</ul></div>';
   if (result) body += '<div class="flash ' + (result.ok ? 'good' : 'bad') + '"><strong>' + esc(result.title) + '</strong><ul>' + result.items.map((item) => '<li>' + esc(item) + '</li>').join('') + '</ul></div>';
   body += '<form method="post" action="/build/challenge/save" class="builder-form">' + csrfField(req) +
-    '<fieldset><legend>01 / LAB IDENTITY</legend><label>Challenge title<input name="title" maxlength="100" required value="' + esc(values.title) + '" placeholder="The Quiet Backup"></label><label>Player-facing description<textarea name="description" maxlength="1200" required>' + esc(values.description) + '</textarea><label>Learning objective<input name="learning_objective" maxlength="300" required value="' + esc(values.learning_objective) + '" placeholder="Practice SUID enumeration and evidence capture."></label></fieldset>' +
-    '<fieldset><legend>02 / SERVICES</legend><p class="muted">List at least three services. Target ports are used for Light Check and example commands.</p><div class="service-list">';
+    '<fieldset><legend>01 / CHALLENGE</legend><label>Challenge title<input name="title" maxlength="100" required value="' + esc(values.title) + '" placeholder="The Quiet Backup"></label><label>Player-facing description<textarea name="description" maxlength="1200" required>' + esc(values.description) + '</textarea><p class="muted">Keep this text solver-facing. Do not include owner identity or the solution.</p></fieldset>' +
+    '<fieldset><legend>02 / SERVICES</legend><p class="muted">Declare at least three exposed services. Port, protocol, and label are enough.</p><div class="service-list">';
   services.forEach((service) => {
-    body += '<div class="service-row"><input name="service_port" inputmode="numeric" maxlength="5" value="' + esc(service.port) + '" placeholder="22"><select name="service_protocol"><option value="tcp"' + (service.protocol === 'tcp' ? ' selected' : '') + '>TCP</option><option value="udp"' + (service.protocol === 'udp' ? ' selected' : '') + '>UDP</option></select><input name="service_label" maxlength="80" value="' + esc(service.label) + '" placeholder="SSH"><input name="service_note" maxlength="160" value="' + esc(service.note) + '" placeholder="Clue/service purpose"></div>';
+    body += '<div class="service-row"><input name="service_port" inputmode="numeric" maxlength="5" required value="' + esc(service.port) + '" placeholder="22"><select name="service_protocol"><option value="tcp"' + (service.protocol === 'tcp' ? ' selected' : '') + '>TCP</option><option value="udp"' + (service.protocol === 'udp' ? ' selected' : '') + '>UDP</option></select><input name="service_label" maxlength="80" required value="' + esc(service.label) + '" placeholder="SSH"></div>';
   });
   body += '</div></fieldset>' +
-    '<fieldset><legend>03 / INTENDED PATH <span class="legend-note">MENTOR ONLY</span></legend><label>Initial foothold summary<textarea name="initial_foothold_summary" maxlength="700" required>' + esc(values.initial_foothold_summary) + '</textarea></label><label>Enumeration clue<textarea name="enumeration_clue" maxlength="700" required>' + esc(values.enumeration_clue) + '</textarea></label><label>Privilege-escalation technique<input name="pe_technique" maxlength="200" required value="' + esc(values.pe_technique) + '" placeholder="SUID / sudo / cron"></label><label>Intended path<textarea name="intended_path" maxlength="1400" required>' + esc(values.intended_path) + '</textarea></label><label>Flag location summary<textarea name="flag_location_summary" maxlength="500" required>' + esc(values.flag_location_summary) + '</textarea></label></fieldset>' +
-    '<fieldset><legend>04 / PLAYER VIEW</legend><label>Initial hint<input name="initial_hint" maxlength="400" required value="' + esc(values.initial_hint) + '" placeholder="Start with the service banner."></label><p class="muted">Do not include solver identity or solution details in player-facing text.</p></fieldset>' +
-    '<fieldset><legend>05 / FLAG</legend><label>Flag<input name="flag" maxlength="120" required value="' + esc(values.flag) + '" placeholder="MBC{...}"></label><p class="muted">The flag is encrypted at rest and never shown to other players.</p></fieldset>' +
+    '<fieldset><legend>03 / MENTOR NOTES <span class="legend-note">MENTOR ONLY</span></legend><label>Solution / path notes<textarea name="mentor_notes" maxlength="1400" required placeholder="Example: enumerate the web service, obtain a non-root shell, then exploit the writable SUID helper to read the flag.">' + esc(values.intended_path) + '</textarea><p class="muted">One short note is enough. The portal fills the remaining review metadata and player hint automatically.</p></fieldset>' +
+    '<fieldset><legend>04 / FLAG</legend><label>Flag<input name="flag" maxlength="120" required value="' + esc(values.flag) + '" placeholder="MBC{...}"></label><p class="muted">The flag is encrypted at rest and never shown to other players.</p></fieldset>' +
     '<div class="form-actions">' + formButton('SAVE DRAFT') + '<button class="button ghost" type="submit" formaction="/build/challenge/check">RUN LIGHT CHECK</button><button class="button primary" type="submit" formaction="/build/challenge/submit">SUBMIT FOR REVIEW</button><a class="button ghost" href="/build/challenge/preview">PLAYER PREVIEW</a><a class="button ghost" href="/build">BACK TO BUILD</a></div></form>';
   return renderPage('Build your lab', body, req);
 }
