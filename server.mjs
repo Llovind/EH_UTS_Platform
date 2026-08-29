@@ -997,7 +997,7 @@ function workspace(req, res) {
     stepCard('02', 'SETUP TARGET', status.target?.status || 'not_started', 'Ubuntu target. This is the lab host and should be connected first.', '/setup/target') +
     stepCard('03', 'BUILD YOUR LAB', buildState, 'Create the challenge in the portal, then run Light Check.', targetReady ? '/build' : '') +
     stepCard('04', 'SETUP ATTACKER', status.attacker?.status || 'not_started', 'Kali VM or Kali WSL. Use the tunnel to test peer labs.', '/setup/attacker') +
-    stepCard('05', 'LAB SPACE', labState, 'Open peer labs, use the available commands, and submit flags.', phase === 'LIVE' || phase === 'LOCKED' ? '/lab-space' : '') +
+    stepCard('05', 'LAB SPACE', labState, 'Open peer labs, review targets, and submit flags.', phase === 'LIVE' || phase === 'LOCKED' ? '/lab-space' : '') +
     '</section>';
   content += '<div class="inline-actions"><a class="button ghost small" href="/learn">OPEN LEARN MODULES</a></div>';
   content += '<section class="timeline"><span class="kicker">SCHEDULE</span><div><strong>BUILD</strong><span>Until ' + esc(formatWhen(cfg.buildDeadlineAt)) + '</span></div><div><strong>LIVE</strong><span>' + esc(formatWhen(cfg.portalOpenAt)) + '</span></div><div><strong>LOCK</strong><span>' + esc(formatWhen(cfg.gameLockAt)) + '</span></div></section>';
@@ -1444,7 +1444,7 @@ app.get('/lab-space/:id', requireAuth, (req, res) => {
   let content = pageHead('LAB SPACE / LAB ' + String(challenge.id).padStart(2, '0'), challenge.title, 'Solver and owner identities are hidden.');
   content += '<div class="lab-detail-stack">';
   content += '<div class="target-banner"><span class="kicker">TARGET IP</span><strong>' + esc(challenge.target_ip) + '</strong><button type="button" class="copy-button inline" data-copy="' + esc(challenge.target_ip) + '">COPY IP</button>' + statusBadge(challenge.health_status) + '</div>';
-  content += '<section class="card lab-card"><h2>Services</h2><div class="service-table">' + services.map((service) => '<div><code>' + esc(service.port + '/' + service.protocol) + '</code><strong>' + esc(service.label) + '</strong><span>' + esc(service.note || '') + '</span></div>').join('') + '</div><details><summary>COMMANDS</summary>' + services.map((service) => commandBlock('nmap -sV -p ' + service.port + ' ' + challenge.target_ip)).join('') + '</details></section>';
+  content += '<section class="card lab-card"><h2>Services</h2><div class="service-table">' + services.map((service) => '<div><code>' + esc(service.port + '/' + service.protocol) + '</code><strong>' + esc(service.label) + '</strong><span>' + esc(service.note || '') + '</span></div>').join('') + '</div></section>';
   content += '<section class="card lab-card"><h2>Challenge</h2><p>' + nl2br(challenge.description) + '</p><details><summary>INITIAL HINT</summary><p>' + nl2br(challenge.initial_hint) + '</p></details></section>';
   if (req.user.isVisitor) content += '<div class="callout"><strong>READ-ONLY VISITOR</strong><p>Visitor accounts can inspect labs but cannot submit flags or reports.</p></div>';
   else if (own) content += '<div class="callout danger"><strong>SELF-SOLVE BLOCKED</strong><p>Challenge owners cannot submit flags for their own lab.</p></div>';
