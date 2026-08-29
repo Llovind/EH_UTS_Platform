@@ -1,14 +1,14 @@
 :root {
-  --bg: #050505;
-  --surface: #0b0b0b;
-  --surface-strong: #111111;
-  --text: #f3f3f3;
-  --muted: #999999;
-  --line: #2a2a2a;
-  --blue: #4b8dff;
-  --blue-soft: #101a2c;
-  --red: #df5d5d;
-  --red-soft: #241313;
+  --bg: #101214;
+  --surface: #171a1e;
+  --surface-strong: #22272d;
+  --text: #e7e9ec;
+  --muted: #a3a9b2;
+  --line: #353b44;
+  --blue: #6ba2ff;
+  --blue-soft: #1a273b;
+  --red: #e47777;
+  --red-soft: #2e2022;
   --max: 1160px;
 }
 
@@ -53,8 +53,8 @@ code { color: var(--blue); }
 
 .button { display: inline-flex; align-items: center; justify-content: center; min-height: 2.8rem; padding: .7rem 1.05rem; border: 1px solid var(--line); background: var(--surface-strong); color: var(--text); font: 700 .72rem "IBM Plex Mono", Consolas, monospace; letter-spacing: .07em; text-transform: uppercase; }
 .button:hover { border-color: var(--blue); color: var(--blue); }
-.button.primary { border-color: var(--blue); background: var(--blue); color: #050505; }
-.button.primary:hover { background: #78aaff; color: #050505; }
+.button.primary { border-color: var(--blue); background: var(--blue); color: #101419; }
+.button.primary:hover { background: #86b4ff; color: #101419; }
 .button.ghost { background: transparent; }
 .button.danger { border-color: var(--red); background: transparent; color: var(--red); }
 .button.danger:hover { background: var(--red-soft); color: #ffb1b1; }
@@ -122,7 +122,7 @@ code { color: var(--blue); }
 .form-foot a { color: var(--blue); }
 label { display: grid; gap: .4rem; color: var(--text); font: 700 .68rem "IBM Plex Mono", Consolas, monospace; letter-spacing: .04em; text-transform: uppercase; }
 label small, .legend-note { color: var(--muted); font: .65rem "IBM Plex Mono", Consolas, monospace; letter-spacing: 0; text-transform: none; }
-input, select, textarea { width: 100%; border: 1px solid var(--line); border-radius: 0; padding: .7rem .75rem; outline: none; background: #070707; color: var(--text); }
+input, select, textarea { width: 100%; border: 1px solid var(--line); border-radius: 0; padding: .7rem .75rem; outline: none; background: #14181c; color: var(--text); }
 input:focus, select:focus, textarea:focus { border-color: var(--blue); }
 textarea { min-height: 7rem; resize: vertical; }
 fieldset { display: grid; gap: .9rem; margin: 0; padding: 1rem; border: 1px solid var(--line); }
@@ -134,7 +134,7 @@ legend { padding: 0 .4rem; color: var(--blue); font: 700 .68rem "IBM Plex Mono",
 .inline-form { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .65rem; }
 .inline-form input { width: min(100%, 18rem); }
 
-.command { position: relative; overflow-x: auto; margin: .65rem 0; padding: .9rem 4.8rem .9rem .9rem; border: 1px solid var(--line); background: #020202; color: var(--text); font: .78rem/1.5 "IBM Plex Mono", Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
+.command { position: relative; overflow-x: auto; margin: .65rem 0; padding: .9rem 4.8rem .9rem .9rem; border: 1px solid var(--line); background: #0d1013; color: var(--text); font: .78rem/1.5 "IBM Plex Mono", Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
 .command code { color: var(--text); }
 .copy-button { position: absolute; top: .5rem; right: .5rem; padding: .35rem .45rem; border: 1px solid var(--line); background: var(--surface-strong); color: var(--blue); font: .6rem "IBM Plex Mono", Consolas, monospace; }
 .copy-button:hover { border-color: var(--blue); }
@@ -179,7 +179,7 @@ summary { cursor: pointer; color: var(--blue); font-family: "IBM Plex Mono", Con
 .admin-actions { margin-top: 1rem; }
 .note-form { display: flex; flex: 1 1 20rem; gap: .5rem; }
 .note-form input { min-width: 0; }
-.security-callout { display: flex; gap: .75rem; margin-top: 1.5rem; padding: .9rem 1rem; border: 1px solid var(--red); color: #ffb1b1; font-size: .76rem; }
+.security-callout { display: flex; gap: .75rem; margin-top: 1.5rem; padding: .9rem 1rem; border: 1px solid var(--red); color: #f0a0a0; font-size: .76rem; }
 .ops-table, .audit-table { overflow-x: auto; border-top: 1px solid var(--line); }
 .ops-row { display: grid; grid-template-columns: 1.1fr 1fr 1fr 1.1fr 1.5fr 1.5fr; gap: .75rem; align-items: center; min-width: 62rem; padding: .7rem .75rem; border-bottom: 1px solid var(--line); color: var(--muted); font-size: .72rem; }
 .ops-row > span:first-child { display: flex; flex-direction: column; gap: .15rem; }
