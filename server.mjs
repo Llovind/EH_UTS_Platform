@@ -417,7 +417,7 @@ function confirmationField(label, expected) {
 }
 function renderPage(title, content, req) {
   const user = req.user;
-  const documentLanguage = req.path === '/learn' || req.path.startsWith('/learn/') ? 'id' : 'en';
+  const documentLanguage = 'en';
   const currentPath = req.path;
   const navLink = (href, label, active) => '<a' + (active ? ' class="is-active" aria-current="page"' : '') + ' href="' + href + '">' + label + '</a>';
   const nav = user
@@ -426,7 +426,7 @@ function renderPage(title, content, req) {
       '<span class="account-chip"><span>ACCOUNT</span><strong>' + esc(req.user.caasId) + '</strong></span><form class="nav-form" method="post" action="/logout">' + csrfField(req) + '<button type="submit">Sign out</button></form>'
     : navLink('/scoreboard', 'Scoreboard', currentPath.startsWith('/scoreboard')) + '<a class="nav-cta' + (currentPath === '/login' ? ' is-active' : '') + '" href="/login"' + (currentPath === '/login' ? ' aria-current="page"' : '') + '>Sign in</a>';
   return '<!doctype html><html lang="' + documentLanguage + '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="MBC LAS Week 4 portal"><title>' +
-    esc(title) + ' · MBC LAS W4</title><link rel="icon" href="/logo.png"><link rel="stylesheet" href="/styles.css?v=20260830-ui-system"><script src="/app.js?v=20260830-ui-system" defer></script></head><body><a class="skip-link" href="#main-content">SKIP TO CONTENT</a><header class="site-header"><a class="brand" href="/"><img src="/logo.png" alt="MBC Laboratory"><span>LAS / WEEK 04</span></a><nav aria-label="Primary navigation">' +
+    esc(title) + ' · MBC LAS W4</title><link rel="icon" href="/logo.png"><link rel="stylesheet" href="/styles.css?v=20260830-learn-v2"><script src="/app.js?v=20260830-learn-v2" defer></script></head><body><a class="skip-link" href="#main-content">SKIP TO CONTENT</a><header class="site-header"><a class="brand" href="/"><img src="/logo.png" alt="MBC Laboratory"><span>LAS / WEEK 04</span></a><nav aria-label="Primary navigation">' +
     nav + '</nav></header><main class="shell" id="main-content">' + content + '</main><footer class="site-footer"><span>MBC LABORATORY · CYBER SECURITY DIVISION</span><span>AUTHORIZED TRAINING NETWORK · ' + esc(cfg.wgCidr) + '</span></footer></body></html>';
 }
 function pageHead(kicker, title, subtitle = '') {
@@ -851,17 +851,11 @@ async function runLightCheck(challenge, peer) {
 }
 
 function assignmentBrief() {
-  return '<section class="card"><span class="kicker">WEEK 4 / DELIVERABLE</span><h2>Build one controlled lab</h2><p class="muted">Kerjakan seluruh challenge di target Ubuntu milikmu. VPS target bersifat optional; Ubuntu 24.04 direkomendasikan.</p><ul><li>Minimal 3 service yang dapat dienumerasi.</li><li>Initial access sebagai user non-root.</li><li>Satu jalur privilege escalation Linux yang dapat dibuktikan.</li><li>Satu flag dengan format <code>MBC{...}</code>.</li><li>Isi challenge langsung di <strong>BUILD</strong>; tidak perlu mengirim data credential ke mentor.</li></ul></section>';
-}
-function eventTimeline() {
-  return '<section class="timeline"><span class="kicker">PORTAL TIMELINE</span>' +
-    '<div><strong>MON 31 AUG</strong><span>Activate account, connect attacker + target, start build.</span></div>' +
-    '<div><strong>WED 02 SEP · 09:00 WIB</strong><span>Initial challenge cutoff. Submit first complete version in portal.</span></div>' +
-    '<div><strong>WED 02 SEP · 11:00 WIB</strong><span>Lab Space opens for approved challenges.</span></div>' +
-    '<div><strong>FRI 04 SEP · 15:00 WIB</strong><span>Final portal work and presentation material complete.</span></div>' +
-    '<div><strong>FRI 04 SEP · 18:00 WIB</strong><span>Flag submission and leaderboard lock.</span></div>' +
-    '<div><strong>04–05 SEP</strong><span>Present your lab, path, evidence, and hardening.</span></div>' +
-    '</section>';
+  return '<section class="card assignment-card"><span class="kicker">WEEK 4 / DELIVERABLE</span><h2>Build one controlled lab</h2><p class="muted">A public Ubuntu 24.04 VPS is required for this assignment. Local desktop or WSL-only targets are not accepted because other participants must reach your lab through the WireGuard network.</p>' +
+    '<div class="assignment-grid"><div><h3>Required outcome</h3><ul><li>At least three services that can be enumerated.</li><li>An initial foothold as a non-root user.</li><li>One demonstrable Linux privilege-escalation path.</li><li>One case-sensitive flag in <code>MBC{...}</code> format.</li><li>Submit all challenge details directly in <strong>BUILD</strong>; do not send credentials to the mentor.</li></ul></div>' +
+    '<div><h3>Recommended VPS baseline</h3><ul><li>Ubuntu 24.04 LTS, 1 vCPU, and 1–2 GB RAM.</li><li>At least 20 GB disk and one public IPv4 address.</li><li>WireGuard is the only path for the vulnerable lab services.</li><li>Keep SSH restricted to your administration source.</li></ul></div></div>' +
+    '<div class="assignment-callout"><h3>No-cost starting points</h3><p class="muted">Free plans change and may require identity or payment verification. Check the provider terms and set a spending alert before creating a VM.</p><ul class="link-list"><li><a href="https://docs.oracle.com/iaas/Content/FreeTier/freetier.htm" target="_blank" rel="noopener noreferrer">Oracle Cloud Always Free</a><span>Always Free compute in your home region, subject to capacity and eligibility.</span></li><li><a href="https://aws.amazon.com/ec2/getting-started/" target="_blank" rel="noopener noreferrer">AWS EC2 Free Tier</a><span>Free-plan or credit eligibility varies by account age and usage; monitor billing.</span></li><li><a href="https://cloud.google.com/free" target="_blank" rel="noopener noreferrer">Google Cloud Free Program</a><span>New-account credits plus an eligible monthly free tier; quotas and regions apply.</span></li><li><a href="https://azure.microsoft.com/en-us/free/students/" target="_blank" rel="noopener noreferrer">Azure for Students</a><span>Use only if your active student account is eligible for the offer.</span></li></ul></div>' +
+    '<p class="muted assignment-footnote">Provision the VPS first, connect the Target peer, then complete BUILD. The portal checks reachability before you submit for mentor review.</p></section>';
 }
 
 const app = express();
@@ -1350,7 +1344,7 @@ function learnTrackBlock(track) {
   return '<section class="learn-track" id="track-' + esc(track.id) + '"><header><span class="learn-track-number">' + esc(track.number) + '</span><div><span class="kicker">LEARNING TRACK</span><h2>' + esc(track.title) + '</h2><p>' + esc(track.description) + '</p></div></header><div class="learn-track-grid">' + trackModules.map((module) => learnModuleCard(module, learnModules.indexOf(module))).join('') + '</div></section>';
 }
 function learnReferences(references) {
-  return '<section class="learn-references" id="references"><span class="kicker">PRIMARY SOURCES</span><h2>Read further</h2><p>Materi diringkas dari dokumentasi primer. Verifikasi perilaku command pada image Ubuntu/Kali yang digunakan.</p><ul>' + references.map((reference) => '<li><a href="' + esc(reference.url) + '" target="_blank" rel="noopener noreferrer">' + esc(reference.title) + '<span aria-hidden="true">↗</span></a></li>').join('') + '</ul></section>';
+  return '<section class="learn-references" id="references"><span class="kicker">PRIMARY SOURCES</span><h2>Read further</h2><p>This material is condensed from primary documentation. Verify command behavior on the Ubuntu/Kali image you are using.</p><ul>' + references.map((reference) => '<li><a href="' + esc(reference.url) + '" target="_blank" rel="noopener noreferrer">' + esc(reference.title) + '<span aria-hidden="true">↗</span></a></li>').join('') + '</ul></section>';
 }
 function learnModuleNavigation(index) {
   const previous = learnModules[index - 1];
@@ -1360,17 +1354,17 @@ function learnModuleNavigation(index) {
 
 app.get('/learn', requireAuth, (req, res) => {
   const totalMinutes = learnModules.reduce((sum, module) => sum + module.minutes, 0);
-  let content = pageHead('LEARN / PRIVILEGE ESCALATION', 'Know the boundary', 'Materi Week 4 untuk membangun hypothesis, memvalidasi privilege boundary, dan menyusun evidence secara aman.');
-  content += '<section class="learn-overview"><div><span class="kicker">AUTHORIZED LAB ONLY</span><h2>Think in evidence,<br>not command lists.</h2><p>Ikuti learning path secara berurutan. Setiap modul menjelaskan konsep, command, cara membaca output, kesalahan umum, dan checkpoint yang harus dapat kamu jawab.</p><div class="inline-actions"><a class="button primary" href="/learn/' + esc(learnModules[0].id) + '">START MODULE 01</a><a class="button ghost" href="#curriculum">VIEW CURRICULUM</a></div></div><div class="learn-overview-stats"><div><strong>' + esc(learnModules.length) + '</strong><span>MODULES</span></div><div><strong>' + esc(learnTracks.length) + '</strong><span>TRACKS</span></div><div><strong>±' + esc(totalMinutes) + '</strong><span>MINUTES</span></div></div></section>';
-  content += '<figure class="learn-figure learn-overview-figure"><img src="/learn/pe-workflow.svg" alt="Workflow privilege escalation berbasis evidence dari scope sampai hardening." width="1200" height="340"><figcaption>Workflow yang digunakan pada seluruh modul dan challenge Week 4.</figcaption></figure>';
+  let content = pageHead('LEARN / PRIVILEGE ESCALATION', 'Know the boundary', 'Week 4 material for building hypotheses, validating privilege boundaries, and producing safe evidence.');
+  content += '<section class="learn-overview"><div><span class="kicker">AUTHORIZED LAB ONLY</span><h2>Think in evidence,<br>not command lists.</h2><p>Follow the learning path in order. Each module covers the concept, commands, output interpretation, common mistakes, and a checkpoint you should be able to answer.</p><div class="inline-actions"><a class="button primary" href="/learn/' + esc(learnModules[0].id) + '">START MODULE 01</a><a class="button ghost" href="#curriculum">VIEW CURRICULUM</a></div></div><div class="learn-overview-stats"><div><strong>' + esc(learnModules.length) + '</strong><span>MODULES</span></div><div><strong>' + esc(learnTracks.length) + '</strong><span>TRACKS</span></div><div><strong>±' + esc(totalMinutes) + '</strong><span>MINUTES</span></div></div></section>';
+  content += '<figure class="learn-figure learn-overview-figure"><img src="/learn/pe-workflow.svg" alt="Evidence-based privilege-escalation workflow from scope to hardening." width="1200" height="340"><figcaption>The workflow used across every Week 4 module and challenge.</figcaption></figure>';
   content += '<div id="curriculum" class="learn-curriculum">' + learnTracks.map(learnTrackBlock).join('') + '</div>';
-  content += '<section class="learn-source-note"><span class="kicker">RESEARCH BASIS</span><p>Disusun dari Linux man-pages, GNU manuals, sudo, systemd, WireGuard, dan MITRE ATT&amp;CK. Diagram dibuat khusus untuk LAS Week 4 dan disimpan lokal.</p></section>';
-  content += assignmentBrief() + eventTimeline();
+  content += '<section class="learn-source-note"><span class="kicker">RESEARCH BASIS</span><p>Built from Linux man-pages, GNU manuals, sudo, systemd, WireGuard, and MITRE ATT&amp;CK. The diagrams were created for LAS Week 4 and are stored locally.</p></section>';
+  content += assignmentBrief();
   res.send(renderPage('Learn', content, req));
 });
 app.get('/learn/:module', requireAuth, (req, res) => {
   const module = learnModules.find((item) => item.id === req.params.module);
-  if (!module) return res.status(404).send(renderPage('Not found', notice('Not found', 'Module tidak ditemukan.', 'bad'), req));
+  if (!module) return res.status(404).send(renderPage('Not found', notice('Not found', 'Module not found.', 'bad'), req));
   const index = learnModules.indexOf(module);
   const track = learnTrack(module.track);
   const toc = module.sections.map((section) => '<a href="#' + esc(section.id) + '" data-toc-link="' + esc(section.id) + '">' + esc(section.title) + '</a>').join('');
@@ -1380,7 +1374,7 @@ app.get('/learn/:module', requireAuth, (req, res) => {
   if (module.diagram) content += '<figure class="learn-figure"><img src="' + esc(module.diagram.src) + '" alt="' + esc(module.diagram.alt) + '" width="1200" height="420"><figcaption>' + esc(module.diagram.caption) + '</figcaption></figure>';
   content += module.sections.map(learnSection).join('');
   content += '<section class="learn-section learn-mistakes" id="mistakes" data-learn-section><header><span class="kicker">PATTERN CHECK</span><h2>Common mistakes</h2></header><ul class="learn-bullets">' + module.mistakes.map((mistake) => '<li>' + esc(mistake) + '</li>').join('') + '</ul></section>';
-  content += '<section class="learn-checkpoint" id="checkpoint" data-learn-section><span class="kicker">MODULE CHECKPOINT</span><h2>' + esc(module.checkpoint.prompt) + '</h2><ol>' + module.checkpoint.tasks.map((task) => '<li>' + esc(task) + '</li>').join('') + '</ol><button class="button primary" type="button" data-mark-complete>MARK MODULE COMPLETE</button><p data-complete-status>Progress disimpan pada browser ini.</p></section>';
+  content += '<section class="learn-checkpoint" id="checkpoint" data-learn-section><span class="kicker">MODULE CHECKPOINT</span><h2>' + esc(module.checkpoint.prompt) + '</h2><ol>' + module.checkpoint.tasks.map((task) => '<li>' + esc(task) + '</li>').join('') + '</ol><button class="button primary" type="button" data-mark-complete>MARK MODULE COMPLETE</button><p data-complete-status>Progress is stored in this browser.</p></section>';
   content += learnReferences(module.references) + learnModuleNavigation(index) + '</article></div>';
   res.send(renderPage(module.title, content, req));
 });

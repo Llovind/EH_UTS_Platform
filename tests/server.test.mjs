@@ -273,8 +273,10 @@ test('runnable setup surface exposes health, public installer, and enrollment se
   const learnPage = await fetch(base + '/learn', { headers: { cookie } });
   const learnText = await learnPage.text();
   assert.equal(learnPage.status, 200);
-  assert.match(learnText, /WED 02 SEP/);
-  assert.match(learnText, /FRI 04 SEP · 18:00 WIB/);
+  assert.match(learnText, /A public Ubuntu 24\.04 VPS is required/);
+  assert.match(learnText, /Oracle Cloud Always Free/);
+  assert.match(learnText, /Google Cloud Free Program/);
+  assert.doesNotMatch(learnText, /PORTAL TIMELINE|WED 02 SEP|FRI 04 SEP/);
   assert.doesNotMatch(learnText, /credential recovery|reset notes/i);
   const builderEntries = [
     ['_csrf', builderCsrf], ['title', 'Quiet Backup'],

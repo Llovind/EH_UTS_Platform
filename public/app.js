@@ -165,14 +165,14 @@
       const complete = progress.has(moduleId);
       checkpoint?.classList.toggle('is-complete', complete);
       if (completeButton) completeButton.textContent = complete ? 'MODULE COMPLETED' : 'MARK MODULE COMPLETE';
-      if (completeStatus) completeStatus.textContent = complete ? 'Module ini sudah ditandai selesai pada browser ini.' : 'Progress disimpan pada browser ini.';
+      if (completeStatus) completeStatus.textContent = complete ? 'This module is marked complete in this browser.' : 'Progress is stored in this browser.';
     }
     paintCompleteState();
     completeButton?.addEventListener('click', () => {
       progress.add(moduleId);
       writeLearnProgress(progress);
       paintCompleteState();
-      showToast('Module completed', 'Progress belajar tersimpan pada browser ini.', 'success');
+      showToast('Module completed', 'Learning progress is stored in this browser.', 'success');
     });
 
     const progressBar = document.querySelector('[data-reading-progress]');

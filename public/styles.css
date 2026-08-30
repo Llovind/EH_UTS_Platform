@@ -133,6 +133,20 @@ code { color: var(--blue); }
 .module-grid, .challenge-grid, .admin-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 .module-card, .challenge-card, .admin-card, .card, .form-card, .builder-meta { border: 1px solid var(--line); background: var(--surface); }
 .card { padding: 1.35rem; }
+.assignment-card { margin-top: 2rem; }
+.assignment-card > p { max-width: 78ch; line-height: 1.7; }
+.assignment-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; margin-top: 1.5rem; }
+.assignment-grid > div, .assignment-callout { padding: 1.15rem; border: 1px solid var(--line); background: var(--surface-strong); }
+.assignment-card h3 { margin: 0; color: var(--text); font: 700 .72rem "IBM Plex Mono", Consolas, monospace; letter-spacing: .08em; text-transform: uppercase; }
+.assignment-grid ul { margin-top: .85rem; }
+.assignment-callout { margin-top: 1.5rem; }
+.assignment-callout > p { margin: .8rem 0 0; }
+.link-list { display: grid; gap: .8rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+.link-list li { display: grid; gap: .2rem; }
+.link-list a { color: var(--blue); font-weight: 700; text-decoration: underline; text-underline-offset: .2em; }
+.link-list a:hover { color: #b5d0ff; }
+.link-list span { color: var(--muted); font-size: .82rem; line-height: 1.55; }
+.assignment-footnote { margin-top: 1.5rem; }
 .module-card, .challenge-card, .admin-card { position: relative; padding: 1.1rem; }
 .admin-card { padding: 1.35rem; }
 .module-card, .challenge-card { transition: transform .18s ease, border-color .18s ease, background-color .18s ease; }
@@ -362,6 +376,7 @@ summary:hover { color: #a4c7ff; }
 
 @media (max-width: 920px) {
   .learn-overview { grid-template-columns: 1fr; gap: 2rem; }
+  .assignment-grid { grid-template-columns: 1fr; }
   .learn-module-shell { grid-template-columns: 1fr; }
   .learn-sidebar { position: static; }
   .learn-sidebar nav { display: none; }
