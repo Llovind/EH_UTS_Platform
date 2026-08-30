@@ -29,6 +29,7 @@ test('configuration keeps attacker and target pools independently overridable', 
   assert.equal(config.targetStart, '10.90.0.100');
   assert.equal(config.skipNetworkChecks, false);
   assert.equal(config.wgHelperDryRun, false);
+  assert.equal(config.healthBackgroundIntervalMs, 600_000);
   assert.equal(config.production, true);
   assert.equal(buildConfig({ NODE_ENV: 'test' }).wgHelperDryRun, true);
 });

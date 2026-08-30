@@ -37,6 +37,7 @@ The portal uses Node's built-in `node:sqlite`, so use Node.js 22.5 or newer (the
 - For Tailscale administration from a workstation, keep Tailscale connected and map `ctf-las.mbclaboratory.com` to the VPS Tailscale IP (`100.71.110.7`) in the workstation hosts file. This keeps the existing HTTPS certificate while routing the admin request through Tailscale.
 - Target IPs must be assigned from the target peer range (`10.77.4.100–129`); the form rejects other networks.
 - Admin pages: `/admin/review`, `/admin/peers`, `/admin/health`, `/admin/event`, and `/admin/audit`.
+- In production, the portal runs an automatic target-health sweep every 10 minutes (`WG_HEALTH_BACKGROUND_INTERVAL_SECONDS=600`). It combines a WireGuard handshake check with a target-IP ping; transient failures are kept in a streak and only mark a lab degraded after the configured threshold.
 - `OPEN` is an explicit early-open override. `LOCK` is global and final; it freezes challenge writes, flag submissions, leaderboard changes, and challenge statuses.
 - A target becomes `degraded` only when the WireGuard handshake is stale and three target-IP probes fail with at least 20 seconds between attempts. A single service-port failure or one probe failure is not enough.
 - In local development `SKIP_NETWORK_CHECKS=true` safely treats the probe as a pass-through. Production startup requires `SKIP_NETWORK_CHECKS=false`, a real WireGuard helper, HTTPS, and a long admin password.

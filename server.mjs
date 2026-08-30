@@ -74,7 +74,7 @@ if (!/^[A-Za-z0-9_.-]{1,15}$/.test(cfg.wgInterface) || !/^(?:\d{1,3}\.){3}\d{1,3
   console.error('WireGuard interface, CIDR, hub IP, or endpoint configuration is invalid.');
   process.exit(1);
 }
-if (!Number.isFinite(cfg.healthHandshakeMaxAgeMs) || cfg.healthHandshakeMaxAgeMs <= 0 || !Number.isFinite(cfg.healthProbeIntervalMs) || cfg.healthProbeIntervalMs < 0 || !Number.isInteger(cfg.healthRequiredFailures) || cfg.healthRequiredFailures < 1) {
+if (!Number.isFinite(cfg.healthHandshakeMaxAgeMs) || cfg.healthHandshakeMaxAgeMs <= 0 || !Number.isFinite(cfg.healthProbeIntervalMs) || cfg.healthProbeIntervalMs < 0 || !Number.isFinite(cfg.healthBackgroundIntervalMs) || cfg.healthBackgroundIntervalMs < 60 * 1000 || !Number.isInteger(cfg.healthRequiredFailures) || cfg.healthRequiredFailures < 1) {
   console.error('WG_HEALTH_* settings must contain positive numeric values.');
   process.exit(1);
 }
@@ -707,6 +707,24 @@ async function recordTargetHealth(challenge, peer, source = 'manual_recheck') {
     db.prepare('UPDATE challenges SET health_detail=?,updated_at=? WHERE id=?').run(detail, checkedAt, challenge.id);
   }
   return { checked: true, throttled: false, probe, handshake, decision, latest: { status: probe.ok ? 'pass' : 'fail', created_at: checkedAt } };
+}
+
+let healthSweepRunning = false;
+async function runBackgroundHealthSweep() {
+  if (!cfg.production || cfg.skipNetworkChecks || healthSweepRunning) return;
+  healthSweepRunning = true;
+  try {
+    const candidates = db.prepare("SELECT c.*,p.id AS peer_id,p.peer_type AS peer_type,p.assigned_ip AS peer_assigned_ip,p.status AS peer_status,p.public_key AS peer_public_key,p.last_verified_at AS peer_last_verified_at,p.last_handshake_at AS peer_last_handshake_at FROM challenges c LEFT JOIN wireguard_peers p ON p.id=c.target_peer_id WHERE c.status IN ('approved','locked') AND c.health_status<>'disabled' ORDER BY c.id").all();
+    const results = await Promise.allSettled(candidates.map((challenge) => recordTargetHealth(challenge, challenge.peer_id ? { id: challenge.peer_id, peer_type: challenge.peer_type, assigned_ip: challenge.peer_assigned_ip, status: challenge.peer_status, public_key: challenge.peer_public_key, last_verified_at: challenge.peer_last_verified_at, last_handshake_at: challenge.peer_last_handshake_at } : null, 'background_sweep')));
+    const checked = results.filter((result) => result.status === 'fulfilled' && result.value?.checked).length;
+    const degraded = results.filter((result) => result.status === 'fulfilled' && result.value?.decision?.status === 'degraded').length;
+    const failed = results.filter((result) => result.status === 'rejected').length;
+    console.log('[health] background sweep complete: candidates=' + candidates.length + ' checked=' + checked + ' degraded=' + degraded + ' errors=' + failed);
+  } catch (error) {
+    console.error('[health] background sweep failed:', error?.message || 'unknown error');
+  } finally {
+    healthSweepRunning = false;
+  }
 }
 
 function parseServices(req) {
@@ -1574,11 +1592,20 @@ const httpServer = app.listen(cfg.port, cfg.bindHost, () => {
   const bound = typeof address === 'object' && address ? address.port : cfg.port;
   console.log('MBC LAS Week 4 portal listening on ' + cfg.bindHost + ':' + bound);
 });
+const healthSweepTimer = cfg.production && !cfg.skipNetworkChecks
+  ? setInterval(() => { void runBackgroundHealthSweep(); }, cfg.healthBackgroundIntervalMs)
+  : null;
+if (healthSweepTimer) {
+  healthSweepTimer.unref();
+  const initialHealthSweep = setTimeout(() => { void runBackgroundHealthSweep(); }, 5000);
+  initialHealthSweep.unref();
+}
 httpServer.on('error', (error) => {
   console.error('Unable to start portal:', error.message);
   process.exitCode = 1;
 });
 function shutdown() {
+  if (healthSweepTimer) clearInterval(healthSweepTimer);
   httpServer.close(() => {
     try { db.close(); } catch {}
     process.exit(0);

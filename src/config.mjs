@@ -37,6 +37,7 @@ export function buildConfig(env = {}, baseDir = process.cwd()) {
     wgSudoPath: String(value(env, 'WG_SUDO_PATH', '/usr/bin/sudo')),
     healthHandshakeMaxAgeMs: Number(value(env, 'WG_HEALTH_HANDSHAKE_MAX_AGE_SECONDS', 180)) * 1000,
     healthProbeIntervalMs: Number(value(env, 'WG_HEALTH_PROBE_INTERVAL_SECONDS', 20)) * 1000,
+    healthBackgroundIntervalMs: Number(value(env, 'WG_HEALTH_BACKGROUND_INTERVAL_SECONDS', 600)) * 1000,
     healthRequiredFailures: Number(value(env, 'WG_HEALTH_REQUIRED_FAILURES', 3)),
     wgHelperDryRun: value(env, 'WG_HELPER_DRY_RUN', production ? 'false' : 'true') === 'true',
     trustedProxyIps: String(value(env, 'TRUSTED_PROXY_IPS', '127.0.0.1,::1')).split(',').map((ip) => ip.trim()).filter(Boolean),
