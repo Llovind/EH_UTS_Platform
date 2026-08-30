@@ -120,6 +120,11 @@ test('runnable setup surface exposes health, public installer, and enrollment se
   const scoreboard = await fetch(base + '/scoreboard');
   assert.equal(scoreboard.status, 200);
   assert.match(await scoreboard.text(), /Leaderboard/);
+  const missingPage = await fetch(base + '/missing-page', { headers: { accept: 'text/html' } });
+  const missingText = await missingPage.text();
+  assert.equal(missingPage.status, 404);
+  assert.match(missingText, /Page not found/);
+  assert.match(missingText, /skip-link/);
 
   const installer = await fetch(base + '/setup/linux.sh');
   const installerText = await installer.text();
@@ -355,6 +360,7 @@ test('admin review is protected by WireGuard source and redacts flag material fr
   const tailscaleAdminText = await tailscaleAdmin.text();
   assert.match(tailscaleAdminText, /href="\/learn"/);
   assert.match(tailscaleAdminText, /account-chip/);
+  assert.match(tailscaleAdminText, /class="is-active" aria-current="page" href="\/admin"/);
   const adminPages = await Promise.all([
     fetch(base + '/admin/peers', { headers: { cookie: adminCookie } }),
     fetch(base + '/admin/health', { headers: { cookie: adminCookie } }),
@@ -374,6 +380,7 @@ test('admin review is protected by WireGuard source and redacts flag material fr
   assert.doesNotMatch(reviewText, /Evidence objective|Non-root shell|Check permissions|Flag in controlled location/);
   assert.match(reviewText, /review-content/);
   assert.match(reviewText, /review-actions-availability/);
+  assert.match(reviewText, /review-state-row/);
   assert.doesNotMatch(reviewText, /hidden-flag-hash|hidden-encrypted/);
   const approveCsrf = csrfFrom(reviewText);
   const approved = await fetch(base + '/admin/review/1/approve', {
@@ -457,6 +464,57 @@ test('scheduled lock is authoritative and freezes challenge state even without a
   const lockedDb = new DatabaseSync(path.join(dataDir, 'las-week4.db'));
   assert.equal(lockedDb.prepare('SELECT status FROM challenges WHERE title=?').get('Lock Fixture').status, 'locked');
   lockedDb.close();
+});
+
+test('lab space exposes clear active, healthy, owned, and solved visual states', async (t) => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mbc-las-w4-states-'));
+  const port = await freePort();
+  const running = startServer(dataDir, port);
+  t.after(async () => {
+    await stopServer(running.child);
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  });
+  await running.ready;
+
+  const db = new DatabaseSync(path.join(dataDir, 'las-week4.db'));
+  const owner = db.prepare("INSERT INTO users(caas_id,password_hash,role) VALUES(?,?, 'participant')").run('CAAS-OWNER', hashPassword('correct horse battery staple')).lastInsertRowid;
+  const solver = db.prepare("INSERT INTO users(caas_id,password_hash,role) VALUES(?,?, 'participant')").run('CAAS-SOLVER', hashPassword('correct horse battery staple')).lastInsertRowid;
+  const challenge = db.prepare("INSERT INTO challenges(owner_user_id,title,target_ip,target_ports,services,description,initial_hint,flag_hash,flag_encrypted,status,validation_status,health_status) VALUES(?,?,?,?,?,?,?,?,?,'approved','passed','healthy')").run(
+    owner, 'Solved State Fixture', '10.77.4.100', '22/tcp', '[{"port":22,"protocol":"tcp","label":"SSH","note":"shell"}]', 'A visual-state fixture for Lab Space.', 'Read the banner.', 'fixture-hash', 'fixture-encrypted',
+  ).lastInsertRowid;
+  db.prepare('INSERT INTO submissions(user_id,challenge_id,submitted_flag_hash,correct,first_blood) VALUES(?,?,?,?,?)').run(solver, challenge, 'submitted-hash', 1, 1);
+  db.prepare("INSERT INTO event_settings(key,value) VALUES('forced_phase','LIVE')").run();
+  db.close();
+
+  const base = 'http://127.0.0.1:' + port;
+  const loginPage = await fetch(base + '/login');
+  const loginCookie = setCookies(loginPage).find((value) => value.startsWith('mbc_las_sid=')) || '';
+  const loginCsrf = csrfFrom(await loginPage.text());
+  const login = await fetch(base + '/login', {
+    method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: loginCookie },
+    body: body({ _csrf: loginCsrf, caas_id: 'CAAS-SOLVER', password: 'correct horse battery staple' }),
+  });
+  const solverCookie = sessionCookie(login);
+  const labSpace = await fetch(base + '/lab-space', { headers: { cookie: solverCookie } });
+  const labSpaceText = await labSpace.text();
+  assert.equal(labSpace.status, 200);
+  assert.match(labSpaceText, /class="is-active" aria-current="page" href="\/lab-space"/);
+  assert.match(labSpaceText, /challenge-card is-solved/);
+  assert.match(labSpaceText, /status solved/);
+  assert.match(labSpaceText, /button success small challenge-action/);
+  assert.match(labSpaceText, /✓ SOLVED · VIEW LAB/);
+
+  const labDetail = await fetch(base + '/lab-space/' + challenge, { headers: { cookie: solverCookie } });
+  const detailText = await labDetail.text();
+  assert.equal(labDetail.status, 200);
+  assert.match(detailText, /notice compact good/);
+  assert.match(detailText, /Your flag has already been recorded/);
+
+  const css = await fetch(base + '/styles.css');
+  const cssText = await css.text();
+  assert.match(cssText, /\.button\.success/);
+  assert.match(cssText, /\.challenge-card\.is-solved/);
+  assert.match(cssText, /--green:/);
 });
 
 test('visitor accounts are read-only, hidden from scoreboard, and cannot access admin', async (t) => {

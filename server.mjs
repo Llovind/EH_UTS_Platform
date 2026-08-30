@@ -418,14 +418,16 @@ function confirmationField(label, expected) {
 function renderPage(title, content, req) {
   const user = req.user;
   const documentLanguage = req.path === '/learn' || req.path.startsWith('/learn/') ? 'id' : 'en';
+  const currentPath = req.path;
+  const navLink = (href, label, active) => '<a' + (active ? ' class="is-active" aria-current="page"' : '') + ' href="' + href + '">' + label + '</a>';
   const nav = user
-    ? '<a href="/setup">Lab Config</a><a href="/learn">Learn</a><a href="/build">Build</a><a href="/lab-space">Lab Space</a><a href="/scoreboard">Scoreboard</a>' +
-      (user.role === 'admin' ? '<a href="/admin">Admin</a>' : '') +
+    ? navLink('/setup', 'Lab Config', currentPath.startsWith('/setup')) + navLink('/learn', 'Learn', currentPath.startsWith('/learn')) + navLink('/build', 'Build', currentPath.startsWith('/build')) + navLink('/lab-space', 'Lab Space', currentPath.startsWith('/lab-space')) + navLink('/scoreboard', 'Scoreboard', currentPath.startsWith('/scoreboard')) +
+      (user.role === 'admin' ? navLink('/admin', 'Admin', currentPath.startsWith('/admin')) : '') +
       '<span class="account-chip"><span>ACCOUNT</span><strong>' + esc(req.user.caasId) + '</strong></span><form class="nav-form" method="post" action="/logout">' + csrfField(req) + '<button type="submit">Sign out</button></form>'
-    : '<a href="/scoreboard">Scoreboard</a><a class="nav-cta" href="/login">Sign in</a>';
+    : navLink('/scoreboard', 'Scoreboard', currentPath.startsWith('/scoreboard')) + '<a class="nav-cta' + (currentPath === '/login' ? ' is-active' : '') + '" href="/login"' + (currentPath === '/login' ? ' aria-current="page"' : '') + '>Sign in</a>';
   return '<!doctype html><html lang="' + documentLanguage + '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="MBC LAS Week 4 portal"><title>' +
-    esc(title) + ' · MBC LAS W4</title><link rel="icon" href="/logo.png"><link rel="stylesheet" href="/styles.css?v=20260830-learn"><script src="/app.js?v=20260830-learn" defer></script></head><body><header class="site-header"><a class="brand" href="/"><img src="/logo.png" alt="MBC Laboratory"><span>LAS / WEEK 04</span></a><nav>' +
-    nav + '</nav></header><main class="shell">' + content + '</main><footer class="site-footer"><span>MBC LABORATORY · CYBER SECURITY DIVISION</span><span>AUTHORIZED TRAINING NETWORK · ' + esc(cfg.wgCidr) + '</span></footer></body></html>';
+    esc(title) + ' · MBC LAS W4</title><link rel="icon" href="/logo.png"><link rel="stylesheet" href="/styles.css?v=20260830-ui-system"><script src="/app.js?v=20260830-ui-system" defer></script></head><body><a class="skip-link" href="#main-content">SKIP TO CONTENT</a><header class="site-header"><a class="brand" href="/"><img src="/logo.png" alt="MBC Laboratory"><span>LAS / WEEK 04</span></a><nav aria-label="Primary navigation">' +
+    nav + '</nav></header><main class="shell" id="main-content">' + content + '</main><footer class="site-footer"><span>MBC LABORATORY · CYBER SECURITY DIVISION</span><span>AUTHORIZED TRAINING NETWORK · ' + esc(cfg.wgCidr) + '</span></footer></body></html>';
 }
 function pageHead(kicker, title, subtitle = '') {
   return '<section class="page-head"><div><span class="kicker">' + esc(kicker) + '</span><h1>' + esc(title) + '</h1>' + (subtitle ? '<p class="muted">' + esc(subtitle) + '</p>' : '') + '</div></section>';
@@ -544,7 +546,7 @@ function setupPage(req, type, token = '', error = '') {
   } else if (readOnly) {
     body += '<section class="callout"><strong>VIEW ONLY</strong><p>Setup commands and peer controls are disabled for this account.</p></section>';
   }
-  body += '<a class="button ghost" href="/setup">BACK TO SETUP</a>';
+  body += '<a class="button back" href="/setup">← BACK TO SETUP</a>';
   return renderPage(title, body, req);
 }
 
@@ -790,7 +792,7 @@ function builderForm(req, values = {}, errors = [], result = null) {
   body += '</div></fieldset>' +
     '<fieldset><legend>03 / MENTOR NOTES <span class="legend-note">MENTOR ONLY</span></legend><label>Solution / path notes<textarea name="mentor_notes" maxlength="1400" required placeholder="Example: enumerate the web service, obtain a non-root shell, then exploit the writable SUID helper to read the flag.">' + esc(values.intended_path) + '</textarea><p class="muted">One short note is enough. The portal fills the remaining review metadata and player hint automatically.</p></fieldset>' +
     '<fieldset><legend>04 / FLAG</legend><label>Flag<input name="flag" maxlength="120" required value="' + esc(values.flag) + '" placeholder="MBC{...}"></label><p class="muted">The flag is encrypted at rest and never shown to other players.</p></fieldset>' +
-    '<div class="form-actions"><div class="action-group action-group-primary">' + formButton('SAVE DRAFT') + '<button class="button ghost" type="submit" formaction="/build/challenge/check">RUN LIGHT CHECK</button><button class="button primary" type="submit" formaction="/build/challenge/submit">SUBMIT FOR REVIEW</button></div><div class="action-group action-group-navigation"><a class="button ghost" href="/build/challenge/preview">PLAYER PREVIEW</a><a class="button ghost" href="/build">BACK TO BUILD</a></div></div></form>';
+    '<div class="form-actions"><div class="action-group action-group-primary">' + formButton('SAVE DRAFT', 'ghost') + '<button class="button ghost" type="submit" formaction="/build/challenge/check">RUN LIGHT CHECK</button><button class="button primary" type="submit" formaction="/build/challenge/submit">SUBMIT FOR REVIEW</button></div><div class="action-group action-group-navigation"><a class="button ghost" href="/build/challenge/preview">PLAYER PREVIEW</a><a class="button back" href="/build">← BACK TO BUILD</a></div></div></form>';
   return renderPage('Build your lab', body, req);
 }
 function playerPreview(req, challenge, peer) {
@@ -800,7 +802,7 @@ function playerPreview(req, challenge, peer) {
   body += '<div class="target-banner"><span class="kicker">TARGET IP</span><strong>' + esc(peer.assigned_ip) + '</strong><span class="status ' + esc(challenge.health_status) + '">' + esc(challenge.health_status) + '</span></div>';
   body += '<section class="card"><h2>Services</h2><div class="service-table">' + services.map((service) => '<div><code>' + esc(service.port + '/' + service.protocol) + '</code><strong>' + esc(service.label) + '</strong><span>' + esc(service.note || '') + '</span></div>').join('') + '</div></section>';
   body += '<section class="card"><h2>Challenge</h2><p>' + nl2br(challenge.description) + '</p><details><summary>INITIAL HINT</summary><p>' + nl2br(challenge.initial_hint) + '</p></details></section>';
-  body += '</div><div class="preview-actions"><a class="button ghost" href="/build/challenge">BACK TO BUILDER</a></div>';
+  body += '</div><div class="preview-actions"><a class="button back" href="/build/challenge">← BACK TO BUILDER</a></div>';
   return renderPage('Player preview', body, req);
 }
 function ownChallenge(userId) {
@@ -978,7 +980,7 @@ function setupStatus(userId) {
   return { attacker: peerForUser(userId, 'attacker'), target: peerForUser(userId, 'target') };
 }
 function stepCard(number, title, state, text, href) {
-  return '<article class="step-card"><div class="step-number">' + esc(number) + '</div><div class="step-content"><div class="step-top"><span class="kicker">' + esc(title) + '</span>' + statusBadge(state) + '</div><p>' + esc(text) + '</p>' + (href ? '<a class="button ghost small" href="' + esc(href) + '">OPEN</a>' : '') + '</div></article>';
+  return '<article class="step-card"><div class="step-number">' + esc(number) + '</div><div class="step-content"><div class="step-top"><span class="kicker">' + esc(title) + '</span>' + statusBadge(state) + '</div><p>' + esc(text) + '</p>' + (href ? '<a class="button primary small" href="' + esc(href) + '">OPEN</a>' : '') + '</div></article>';
 }
 function workspace(req, res) {
   const status = setupStatus(req.user.id);
@@ -1013,7 +1015,7 @@ app.get('/setup', requireAuth, (req, res) => {
     stepCard('03', 'ATTACKER', status.attacker?.status || 'not_started', 'Kali VM or Kali WSL. Connect after the lab is configured.', '/setup/attacker') +
     '</div><section class="callout"><strong>NETWORK RULE</strong><p>The portal may be public. Target IPs are reachable only through WireGuard.</p></section>' +
     (req.user.isVisitor ? '<section class="notice compact"><strong>READ-ONLY VISITOR</strong><p>Setup actions are disabled for this account.</p></section>' : '') +
-    '<a class="button ghost" href="/workspace">BACK TO WORKSPACE</a>';
+    '<a class="button back" href="/workspace">← BACK TO WORKSPACE</a>';
   res.send(renderPage('Setup', content, req));
 });
 app.get('/setup/linux.sh', (req, res) => {
@@ -1173,8 +1175,8 @@ function reviewDetail(req, challenge, noticeText = '') {
   body += '<div class="review-content">';
   body += '<section class="card review-card review-player"><span class="kicker">PLAYER-FACING</span><h2>' + esc(challenge.title) + '</h2><p>' + nl2br(challenge.description) + '</p><p><strong>Initial hint:</strong> ' + nl2br(challenge.initial_hint) + '</p><div class="service-table">' + reviewServices(challenge.services) + '</div></section>';
   body += '<section class="card review-card review-mentor"><span class="kicker">MENTOR-ONLY</span><h2>Mentor notes</h2><p class="review-mentor-notes">' + nl2br(challenge.intended_path) + '</p></section>';
-  body += '<section class="card review-card review-decision"><span class="kicker">DECISION</span><p>Status: <strong>' + esc(challenge.status) + '</strong>. Validation: <strong>' + esc(challenge.validation_status) + '</strong>. Health: <strong>' + esc(challenge.health_status) + '</strong>.</p><div class="review-actions"><div class="review-actions-primary"><form method="post" action="/admin/review/' + challenge.id + '/recheck">' + csrfField(req) + formButton('RECHECK TARGET', 'ghost') + '</form><form method="post" action="/admin/review/' + challenge.id + '/approve">' + csrfField(req) + '<input type="hidden" name="reviewer_note" value="Approved by mentor.">' + formButton('APPROVE / PUBLISH') + '</form><form method="post" action="/admin/review/' + challenge.id + '/return" class="note-form">' + csrfField(req) + '<input name="reviewer_note" maxlength="1000" required placeholder="Required revision note"><button class="button danger" type="submit">RETURN TO AUTHOR</button></form></div><div class="review-actions-availability">' + reviewAvailabilityActions(req, challenge) + '</div></div></section>';
-  body += '</div><a class="button ghost review-back" href="/admin/review">BACK TO REVIEW QUEUE</a>';
+  body += '<section class="card review-card review-decision"><span class="kicker">DECISION</span><div class="review-state-row"><span><small>STATUS</small>' + statusBadge(challenge.status) + '</span><span><small>VALIDATION</small>' + statusBadge(challenge.validation_status) + '</span><span><small>HEALTH</small>' + statusBadge(challenge.health_status) + '</span></div><div class="review-actions"><div class="review-actions-primary"><form method="post" action="/admin/review/' + challenge.id + '/recheck">' + csrfField(req) + formButton('RECHECK TARGET', 'ghost') + '</form><form method="post" action="/admin/review/' + challenge.id + '/approve">' + csrfField(req) + '<input type="hidden" name="reviewer_note" value="Approved by mentor.">' + formButton('APPROVE / PUBLISH') + '</form><form method="post" action="/admin/review/' + challenge.id + '/return" class="note-form">' + csrfField(req) + '<input name="reviewer_note" maxlength="1000" required placeholder="Required revision note"><button class="button danger" type="submit">RETURN TO AUTHOR</button></form></div><div class="review-actions-availability">' + reviewAvailabilityActions(req, challenge) + '</div></div></section>';
+  body += '</div><a class="button back review-back" href="/admin/review">← BACK TO REVIEW QUEUE</a>';
   return renderPage('Admin review', body, req);
 }
 
@@ -1190,8 +1192,8 @@ app.get('/admin', requireAdmin, (req, res) => {
 app.get('/admin/review', requireAdmin, (req, res) => {
   const rows = db.prepare("SELECT c.id,c.title,c.status,c.validation_status,c.health_status,c.updated_at,u.caas_id FROM challenges c JOIN users u ON u.id=c.owner_user_id WHERE c.status='pending_review' ORDER BY c.updated_at ASC").all();
   let content = pageHead('ADMIN / REVIEW', 'Pending labs', 'Review the owner, target status, player view, and intended path.');
-  content += rows.length ? '<div class="admin-list">' + rows.map((row) => '<article class="admin-card"><div class="step-top"><span class="kicker">LAB ' + String(row.id).padStart(2, '0') + '</span>' + statusBadge(row.validation_status) + '</div><h2>' + esc(row.title) + '</h2><p>Owner: <strong>' + esc(row.caas_id) + '</strong></p><div class="admin-grid"><span><small>STATUS</small><strong>' + esc(row.status) + '</strong></span><span><small>HEALTH</small><strong>' + esc(row.health_status) + '</strong></span></div><a class="button ghost small" href="/admin/review/' + row.id + '">OPEN REVIEW</a></article>').join('') + '</div>' : '<div class="empty"><h2>Queue empty</h2><p>No pending challenge requires a decision.</p></div>';
-  content += '<a class="button ghost" href="/admin">BACK TO ADMIN</a>';
+  content += rows.length ? '<div class="admin-list">' + rows.map((row) => '<article class="admin-card"><div class="step-top"><span class="kicker">LAB ' + String(row.id).padStart(2, '0') + '</span>' + statusBadge(row.validation_status) + '</div><h2>' + esc(row.title) + '</h2><p>Owner: <strong>' + esc(row.caas_id) + '</strong></p><div class="admin-grid"><span><small>STATUS</small>' + statusBadge(row.status) + '</span><span><small>HEALTH</small>' + statusBadge(row.health_status) + '</span></div><a class="button primary small" href="/admin/review/' + row.id + '">OPEN REVIEW</a></article>').join('') + '</div>' : '<div class="empty"><h2>Queue empty</h2><p>No pending challenge requires a decision.</p></div>';
+  content += '<a class="button back" href="/admin">← BACK TO ADMIN</a>';
   res.send(renderPage('Review queue', content, req));
 });
 app.get('/admin/review/:id', requireAdmin, (req, res) => {
@@ -1252,7 +1254,7 @@ app.get('/admin/peers', requireAdmin, (req, res) => {
   const rows = db.prepare("SELECT p.*,u.caas_id FROM wireguard_peers p JOIN users u ON u.id=p.user_id ORDER BY p.peer_type,p.assigned_ip,p.id").all();
   let content = pageHead('ADMIN / PEERS', 'Peer inventory', 'Review allocations and revoke a compromised peer. Public keys are never private keys.');
   content += rows.length ? '<div class="ops-table"><div class="ops-row ops-head"><span>PEER</span><span>OWNER</span><span>IP</span><span>STATUS</span><span>VERIFIED</span><span>ACTION</span></div>' + rows.map((row) => '<div class="ops-row"><span><strong>' + esc(row.peer_type.toUpperCase()) + '</strong><small>' + esc(row.id) + '</small></span><span>' + esc(row.caas_id) + '</span><code>' + esc(row.assigned_ip) + '</code><span>' + statusBadge(row.status) + '</span><span>' + esc(row.last_verified_at || 'NOT VERIFIED') + '</span><span>' + (row.status === 'revoked' ? '<span class="muted">REVOKED</span>' : '<form method="post" action="/admin/peers/' + row.id + '/revoke" class="inline-form">' + csrfField(req) + confirmationField('Type REVOKE', 'REVOKE') + formButton('REVOKE', 'danger') + '</form>') + '</span></div>').join('') + '</div>' : '<div class="empty"><h2>No peers</h2><p>Peer allocations appear after participant setup.</p></div>';
-  content += '<a class="button ghost" href="/admin">BACK TO ADMIN</a>';
+  content += '<a class="button back" href="/admin">← BACK TO ADMIN</a>';
   res.send(renderPage('Peer inventory', content, req));
 });
 app.post('/admin/peers/:id/revoke', requireAdmin, requireCsrf, (req, res) => {
@@ -1280,7 +1282,7 @@ app.get('/admin/health', requireAdmin, async (req, res) => {
   let content = pageHead('ADMIN / HEALTH', 'Target health', 'Only target-IP reachability can change a lab to DEGRADED: stale handshake plus three spaced probe failures.');
   content += '<div class="stats">' + stat('Targets', String(rows.length), 'approved or locked labs') + stat('Degraded', String(rows.filter((row) => row.health_status === 'degraded').length), 'threshold reached') + stat('Checks', String(rows.filter((row) => row.health?.checked).length), 'new checks this visit') + '</div>';
   content += rows.length ? '<div class="ops-table"><div class="ops-row ops-head"><span>LAB</span><span>OWNER</span><span>TARGET</span><span>HEALTH</span><span>LAST PROBE</span><span>ACTION</span></div>' + rows.map((row) => '<div class="ops-row"><span><strong>' + esc(row.title) + '</strong><small>' + esc(row.id) + '</small></span><span>' + esc(row.caas_id) + '</span><code>' + esc(row.peer_assigned_ip || row.target_ip) + '</code><span>' + statusBadge(row.health_status) + '<small>' + esc(row.health_detail || 'NO DETAIL') + '</small></span><span>' + esc(row.latest ? row.latest.status.toUpperCase() + ' · ' + row.latest.created_at : 'NOT CHECKED') + '</span><span><form method="post" action="/admin/challenges/' + row.id + '/recheck" class="inline-form">' + csrfField(req) + formButton('RECHECK', 'ghost') + '</form><a class="button ghost small" href="/admin/review/' + row.id + '">REVIEW</a></span></div>').join('') + '</div>' : '<div class="empty"><h2>No target labs</h2><p>Approved labs will appear here.</p></div>';
-  content += '<p class="score-note">' + esc(cfg.skipNetworkChecks ? 'Development mode: target probe is a safe pass-through; production must set SKIP_NETWORK_CHECKS=false and provide helper status.' : 'Probe attempts are throttled to the configured interval. Service-port failures never mark a lab degraded.') + '</p><a class="button ghost" href="/admin">BACK TO ADMIN</a>';
+  content += '<p class="score-note">' + esc(cfg.skipNetworkChecks ? 'Development mode: target probe is a safe pass-through; production must set SKIP_NETWORK_CHECKS=false and provide helper status.' : 'Probe attempts are throttled to the configured interval. Service-port failures never mark a lab degraded.') + '</p><a class="button back" href="/admin">← BACK TO ADMIN</a>';
   res.send(renderPage('Target health', content, req));
 });
 
@@ -1290,7 +1292,7 @@ app.get('/admin/event', requireAdmin, (req, res) => {
   let content = pageHead('ADMIN / EVENT', 'Event controls', 'Server-enforced phase gates. Lock is global and cannot be undone from the portal.');
   content += '<div class="stats">' + stat('Current phase', phase, forced === 'AUTO' ? 'schedule' : 'forced: ' + forced) + stat('Portal open', formatWhen(cfg.portalOpenAt), 'Lab Space') + stat('Game lock', formatWhen(cfg.gameLockAt), 'flags + scoreboard') + '</div>';
   content += '<section class="card"><h2>Schedule</h2><dl><dt>Build cutoff</dt><dd>' + esc(formatWhen(cfg.buildDeadlineAt)) + '</dd><dt>Submission deadline</dt><dd>' + esc(formatWhen(cfg.submissionDeadlineAt)) + '</dd><dt>Portal open</dt><dd>' + esc(formatWhen(cfg.portalOpenAt)) + '</dd><dt>Lock</dt><dd>' + esc(formatWhen(cfg.gameLockAt)) + '</dd></dl></section>';
-  content += '<section class="card"><h2>Authority actions</h2><div class="admin-actions"><form method="post" action="/admin/event/open">' + csrfField(req) + confirmationField('Type OPEN', 'OPEN') + formButton('OPEN LAB SPACE') + '</form><form method="post" action="/admin/event/lock">' + csrfField(req) + confirmationField('Type LOCK', 'LOCK') + formButton('LOCK EVENT', 'danger') + '</form></div></section><a class="button ghost" href="/admin">BACK TO ADMIN</a>';
+  content += '<section class="card"><h2>Authority actions</h2><div class="admin-actions"><form method="post" action="/admin/event/open">' + csrfField(req) + confirmationField('Type OPEN', 'OPEN') + formButton('OPEN LAB SPACE') + '</form><form method="post" action="/admin/event/lock">' + csrfField(req) + confirmationField('Type LOCK', 'LOCK') + formButton('LOCK EVENT', 'danger') + '</form></div></section><a class="button back" href="/admin">← BACK TO ADMIN</a>';
   res.send(renderPage('Event controls', content, req));
 });
 app.post('/admin/event/open', requireAdmin, requireCsrf, (req, res) => {
@@ -1313,7 +1315,7 @@ app.get('/admin/audit', requireAdmin, (req, res) => {
   logEvent(req, 'audit_viewed', 'audit', null, { rowCount: rows.length });
   let content = pageHead('ADMIN / AUDIT', 'Audit trail', 'Recent security, enrollment, peer, review, health, and event actions.');
   content += rows.length ? '<div class="audit-table"><div class="audit-row audit-head"><span>TIME</span><span>ACTOR</span><span>ACTION</span><span>TARGET</span><span>DETAIL</span></div>' + rows.map((row) => '<div class="audit-row"><span>' + esc(row.created_at) + '</span><span>' + esc(row.caas_id || 'SYSTEM') + '</span><strong>' + esc(row.action) + '</strong><span>' + esc([row.target_type, row.target_id].filter(Boolean).join(' / ') || '—') + '</span><code>' + esc(row.details || '') + '</code></div>').join('') + '</div>' : '<div class="empty"><h2>No audit entries</h2><p>Security actions will appear here.</p></div>';
-  content += '<a class="button ghost" href="/admin">BACK TO ADMIN</a>';
+  content += '<a class="button back" href="/admin">← BACK TO ADMIN</a>';
   res.send(renderPage('Audit trail', content, req));
 });
 
@@ -1392,11 +1394,11 @@ app.get('/build', requireAuth, (req, res) => {
   else if (!target || target.status !== 'connected') content += notice('Target not connected', 'Complete target setup before opening the builder.', 'info');
   else if (!challenge) content += '<section class="empty"><h2>No draft yet</h2><p>Create your first challenge in the builder.</p><a class="button primary" href="/build/challenge">START BUILD</a></section>';
   else content += '<section class="card"><div class="step-top"><span class="kicker">CURRENT DRAFT</span>' + statusBadge(challenge.status) + '</div><h2>' + esc(challenge.title) + '</h2><p class="muted">' + esc(challenge.description) + '</p><div class="inline-actions"><a class="button primary" href="/build/challenge">EDIT BUILDER</a><form method="post" action="/build/challenge/recheck">' + csrfField(req) + formButton('RECHECK TARGET', 'ghost') + '</form></div></section>';
-  content += '<a class="button ghost" href="/workspace">BACK TO WORKSPACE</a>';
+  content += '<a class="button back" href="/workspace">← BACK TO WORKSPACE</a>';
   res.send(renderPage('Build', content, req));
 });
 app.get('/build/challenge', requireAuth, (req, res) => {
-  if (req.user.isVisitor) return res.status(403).send(renderPage('Builder unavailable', notice('Builder unavailable', 'Visitor accounts are read-only and cannot open the challenge editor.', 'info') + '<a class="button ghost" href="/build">BACK TO BUILD</a>', req));
+  if (req.user.isVisitor) return res.status(403).send(renderPage('Builder unavailable', notice('Builder unavailable', 'Visitor accounts are read-only and cannot open the challenge editor.', 'info') + '<a class="button back" href="/build">← BACK TO BUILD</a>', req));
   const target = peerForUser(req.user.id, 'target');
   if (!target || target.status !== 'connected') return res.status(403).send(renderPage('Builder locked', notice('Builder locked', 'The target peer must be connected first.', 'info'), req));
   const challenge = ownChallenge(req.user.id);
@@ -1450,7 +1452,12 @@ app.get('/challenges/:id/edit', requireAuth, (req, res) => res.redirect('/build/
 function challengePublicCard(challenge, req) {
   const solverCount = db.prepare('SELECT COUNT(*) AS count FROM submissions WHERE challenge_id=? AND correct=1').get(challenge.id).count;
   const solved = Boolean(db.prepare('SELECT id FROM submissions WHERE user_id=? AND challenge_id=? AND correct=1').get(req.user.id, challenge.id));
-  return '<article class="challenge-card"><div class="step-top"><span class="kicker">LAB ' + String(challenge.id).padStart(2, '0') + '</span>' + statusBadge(challenge.health_status) + '</div><h2>' + esc(challenge.title) + '</h2><p>' + nl2br(challenge.description) + '</p><div class="challenge-meta"><span><small>TARGET</small><code>' + esc(challenge.target_ip) + '</code></span><span><small>SOLVERS</small><strong>' + esc(solverCount) + '</strong></span></div><a class="button ghost small" href="/lab-space/' + challenge.id + '">' + (solved ? 'VIEW SOLVED' : 'OPEN LAB') + '</a></article>';
+  const own = challenge.owner_user_id === req.user.id;
+  const cardState = solved ? ' is-solved' : own ? ' is-owned' : '';
+  const stateBadge = solved ? statusBadge('solved') : own ? statusBadge('owned') : '';
+  const actionClass = solved ? 'success' : own ? 'ghost' : 'primary';
+  const actionLabel = solved ? '✓ SOLVED · VIEW LAB' : own ? 'VIEW YOUR LAB' : 'OPEN LAB';
+  return '<article class="challenge-card' + cardState + '"><div class="step-top"><span class="kicker">LAB ' + String(challenge.id).padStart(2, '0') + '</span><div class="card-badges">' + stateBadge + statusBadge(challenge.health_status) + '</div></div><h2>' + esc(challenge.title) + '</h2><p>' + nl2br(challenge.description) + '</p><div class="challenge-meta"><span><small>TARGET</small><code>' + esc(challenge.target_ip) + '</code></span><span><small>SOLVERS</small><strong>' + esc(solverCount) + '</strong></span></div><a class="button ' + actionClass + ' small challenge-action" href="/lab-space/' + challenge.id + '">' + actionLabel + '</a></article>';
 }
 function scoreboardRows() {
   return db.prepare("SELECT id,caas_id FROM users WHERE role='participant' AND active=1 AND COALESCE(is_visitor,0)=0 AND COALESCE(is_test,0)=0 ORDER BY caas_id").all()
@@ -1481,7 +1488,7 @@ app.get('/lab-space', requireAuth, (req, res) => {
     const rows = db.prepare("SELECT * FROM challenges WHERE status IN ('approved','locked') AND health_status<>'disabled' ORDER BY id").all();
     content += rows.length ? '<div class="challenge-grid">' + rows.map((challenge) => challengePublicCard(challenge, req)).join('') + '</div>' : '<div class="empty"><h2>No labs yet</h2><p>Waiting for mentor approval.</p></div>';
   }
-  content += '<a class="button ghost" href="/workspace">BACK TO WORKSPACE</a>';
+  content += '<a class="button back" href="/workspace">← BACK TO WORKSPACE</a>';
   res.send(renderPage('Lab Space', content, req));
 });
 app.get('/lab-space/:id', requireAuth, (req, res) => {
@@ -1502,7 +1509,7 @@ app.get('/lab-space/:id', requireAuth, (req, res) => {
   content += '</div><div class="lab-detail-actions">';
   if (!req.user.isVisitor && !own && currentPhase() === 'LIVE' && !solved) content += '<form method="post" action="/lab-space/' + challenge.id + '/flag" class="flag-form">' + csrfField(req) + '<label>Submit flag<input name="flag" maxlength="120" autocomplete="off" placeholder="MBC{...}" required></label>' + formButton('SUBMIT FLAG') + '</form>';
   if (currentPhase() === 'LIVE' && !req.user.isVisitor) content += '<form method="post" action="/lab-space/' + challenge.id + '/report" class="report-form">' + csrfField(req) + formButton('REPORT UNREACHABLE', 'danger') + '</form>';
-  content += '<a class="button ghost lab-back" href="/lab-space">BACK TO LAB SPACE</a></div>';
+  content += '<a class="button back lab-back" href="/lab-space">← BACK TO LAB SPACE</a></div>';
   res.send(renderPage(challenge.title, content, req));
 });
 app.post('/lab-space/:id/flag', submitLimiter, requireAuth, requireWriteAccess, requireCsrf, requireLive, (req, res) => {
@@ -1545,7 +1552,10 @@ app.get('/healthz', (req, res) => {
 });
 
 app.use((req, res) => {
-  res.status(404).type('text/plain').send('NOT_FOUND');
+  if (!req.accepts('html')) return res.status(404).type('text/plain').send('NOT_FOUND');
+  const destination = req.user ? '/workspace' : '/';
+  const content = pageHead('PORTAL / 404', 'Page not found', 'The requested route does not exist or is no longer available.') + '<section class="empty"><h2>Return to a known route</h2><p>Use the portal navigation or return to the main workspace.</p><a class="button primary" href="' + destination + '">RETURN TO ' + (req.user ? 'WORKSPACE' : 'HOME') + '</a></section>';
+  res.status(404).send(renderPage('Page not found', content, req));
 });
 app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);
