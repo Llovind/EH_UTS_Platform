@@ -138,6 +138,8 @@ test('runnable setup surface exposes health, public installer, and enrollment se
   assert.match(installerText, /WG_UP_OK=0/);
   assert.match(installerText, /wg-quick up \"\$CONFIG_PATH\"/);
   assert.match(installerText, /10\.77\.4\.1/);
+  assert.match(installerText, /latest-handshakes/);
+  assert.match(installerText, /WireGuard gateway \$HUB_IP is reachable/);
   assert.match(installerText, /\[INFO\]/);
   assert.match(installer.headers.get('content-disposition') || '', /mbc-las-w4-setup\.sh/);
   const appJs = await fetch(base + '/app.js');
