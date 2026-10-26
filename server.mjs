@@ -1332,6 +1332,7 @@ app.get('/admin/event', requireAdmin, (req, res) => {
   content += '<section class="card"><h2>Authority Actions</h2><div class="admin-actions">' +
     '<form method="post" action="/admin/event/open">' + csrfField(req) + confirmationField('Type OPEN', 'OPEN') + formButton('OPEN GAME') + '</form>' +
     '<form method="post" action="/admin/event/lock">' + csrfField(req) + confirmationField('Type LOCK', 'LOCK') + formButton('LOCK EVENT', 'danger') + '</form>' +
+    '<form method="post" action="/admin/event/reset-scores">' + csrfField(req) + confirmationField('Type RESET', 'RESET') + formButton('RESET SUBMISSIONS', 'danger') + '</form>' +
     '</div></section>' +
     '<a class="button back" href="/admin">← BACK TO ADMIN</a>';
   res.send(renderPage('Event Controls', content, req));
@@ -1349,6 +1350,15 @@ app.post('/admin/event/lock', requireAdmin, requireCsrf, (req, res) => {
   // Lock all published challenges
   db.prepare("UPDATE challenges SET status='locked',updated_at=? WHERE status='published'").run(nowIso());
   logEvent(req, 'event_locked', 'event', 'forced_phase');
+  res.redirect('/admin/event');
+});
+app.post('/admin/event/reset-scores', requireAdmin, requireCsrf, (req, res) => {
+  if (!confirmationMatches(req, 'RESET')) return res.status(400).send(renderPage('Event Controls', notice('Confirmation required', 'Type RESET to purge submissions and hint unlocks.', 'bad'), req));
+  withTransaction(() => {
+    db.prepare('DELETE FROM submissions').run();
+    db.prepare('DELETE FROM hint_unlocks').run();
+  });
+  logEvent(req, 'scores_reset', 'event', 'submissions');
   res.redirect('/admin/event');
 });
 
