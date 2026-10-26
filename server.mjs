@@ -1,4 +1,4 @@
-﻿import fs from 'node:fs';
+import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -459,14 +459,60 @@ const teamLimiter   = rateLimit({ windowMs: 15 * 60 * 1000, limit: 40,  standard
 const hintLimiter   = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30,  standardHeaders: true, legacyHeaders: false });
 app.use(generalLimiter);
 
-// Bootstrap admin account if absent
-const existingAdmin = db.prepare("SELECT id FROM users WHERE role='admin' LIMIT 1").get();
+// Bootstrap or sync admin account credentials from environment
+const existingAdmin = db.prepare("SELECT id, caas_id FROM users WHERE role='admin' LIMIT 1").get();
 if (!existingAdmin) {
-  if (!cfg.adminPassword) {
-    console.error('ADMIN_PASSWORD is required to bootstrap the first admin.');
-    process.exit(1);
+  if (cfg.adminPassword) {
+    db.prepare("INSERT INTO users(caas_id,password_hash,role) VALUES(?,?,'admin')").run(cfg.adminId, hashPassword(cfg.adminPassword));
   }
-  db.prepare("INSERT INTO users(caas_id,password_hash,role) VALUES(?,?,'admin')").run(cfg.adminId, hashPassword(cfg.adminPassword));
+} else if (cfg.adminPassword) {
+  db.prepare("UPDATE users SET caas_id=?, password_hash=?, active=1 WHERE id=?").run(cfg.adminId, hashPassword(cfg.adminPassword), existingAdmin.id);
+}
+
+// Auto-seed default challenges if challenges table is empty
+const challengeCount = db.prepare("SELECT COUNT(*) AS count FROM challenges").get().count;
+if (challengeCount === 0 && cfg.appKey) {
+  const defaultChallenges = [
+    {
+      title: 'User Flag',
+      category: 'Initial Access & Lateral Movement',
+      description:
+        'Gunakan seluruh tahapan recon dan eksploitasi web untuk mendapatkan akses awal ke target ExamCorp.\n\n' +
+        'Setelah berhasil menembus panel admin via SQL Injection dan mendapatkan webshell, lakukan enumerasi credential pada file konfigurasi internal (/var/www/html/db_config.php).\n\n' +
+        'Gunakan credential tersebut untuk login interaktif melalui SSH sebagai `examuser` dan dapatkan user flag dari home directory (/home/examuser/user.txt).',
+      iso_download_url: cfg.vulnMachineUrl || 'https://drive.google.com/drive/folders/1VmJFkHvxpfF5WYlh1-3pttyZJUyviEXN',
+      vm_specs: 'RAM: 2GB · Disk: 20GB · Arch: x86_64 · Mode: Host-Only',
+      clue: 'Temukan file db_config.php melalui webshell. Password yang ditemukan pada file konfigurasi di-reuse untuk akun SSH examuser.',
+      points: 50,
+      hint_penalty: 10,
+      flag: 'EH{user_flag_1}',
+    },
+    {
+      title: 'Root Flag',
+      category: 'Privilege Escalation',
+      description:
+        'Setelah berhasil memperoleh shell sebagai `examuser`, misimu belum selesai - kamu harus mendapatkan akses administrator penuh (root).\n\n' +
+        'Lakukan audit izin sudo pada sistem. Manfaatkan binary dengan konfigurasi istimewa untuk mengeksekusi root shell (referensi: GTFOBins).\n\n' +
+        'Baca flag akhir yang tersimpan di direktori root (/root/root.txt).',
+      iso_download_url: cfg.vulnMachineUrl || 'https://drive.google.com/drive/folders/1VmJFkHvxpfF5WYlh1-3pttyZJUyviEXN',
+      vm_specs: 'RAM: 2GB · Disk: 20GB · Arch: x86_64 · Mode: Host-Only',
+      clue: 'Jalankan `sudo -l` untuk mengidentifikasi binary yang diizinkan tanpa password. Cari teknik abuse untuk binary tersebut di GTFOBins.',
+      points: 50,
+      hint_penalty: 10,
+      flag: 'EH{root_flag_congrats}',
+    },
+  ];
+  for (const c of defaultChallenges) {
+    db.prepare(`
+      INSERT INTO challenges (
+        title, category, description, clue, flag_hash, flag_encrypted,
+        points, hint_penalty, iso_download_url, vm_specs, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published')
+    `).run(
+      c.title, c.category, c.description, c.clue, sha256(c.flag), encryptSecret(c.flag, cfg.appKey),
+      c.points, c.hint_penalty, c.iso_download_url, c.vm_specs
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
