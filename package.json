@@ -1,14 +1,15 @@
 {
-  "name": "mbc-las-week4-portal",
+  "name": "ctf-portal",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Small, security-first portal for the MBC LAS Week 4 mini CTF.",
+  "description": "Security-first squad CTF portal for vulnerable lab challenges.",
   "scripts": {
-    "start": "node server.mjs",
-    "dev": "node --watch server.mjs",
-    "test": "node --test",
-    "import:invites": "node scripts/import-invites.mjs"
+    "start": "node --experimental-sqlite server.mjs",
+    "dev": "node --experimental-sqlite --watch server.mjs",
+    "test": "node --experimental-sqlite --test tests/portal.test.mjs tests/security.test.mjs tests/health.test.mjs tests/import-invites.test.mjs tests/wireguard.test.mjs",
+    "seed": "node --experimental-sqlite scripts/seed-demo.mjs",
+    "import:invites": "node --experimental-sqlite scripts/import-invites.mjs"
   },
   "dependencies": {
     "express": "^5.1.0",

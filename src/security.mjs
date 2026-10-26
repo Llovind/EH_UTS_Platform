@@ -11,7 +11,7 @@ export function normalizeId(value) {
 
 export function isStrongPassword(value) {
   const password = String(value ?? '');
-  return password.length >= 12 && password.length <= 200;
+  return password.length >= 8 && password.length <= 200;
 }
 
 export function hashPassword(password) {
@@ -112,5 +112,5 @@ export function validTargetIp(ip, cidr = '10.77.4.0/24', startIp = '10.77.4.100'
 }
 
 export function validFlag(flag) {
-  return /^MBC\{[A-Za-z0-9_!@#$%\-]{4,100}\}$/.test(String(flag || ''));
+  return /^EH\{[A-Za-z0-9_!@#$%\-]{4,100}\}$/.test(String(flag || ''));
 }

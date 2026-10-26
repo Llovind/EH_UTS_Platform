@@ -19,11 +19,13 @@ if (fs.existsSync(envPath)) {
   }
 }
 const dataDir = path.resolve(root, process.env.DATA_DIR || './data');
-const db = new DatabaseSync(path.join(dataDir, 'las-week4.db'));
+const dbName = fs.existsSync(path.join(dataDir, 'ctf-portal.db')) || !fs.existsSync(path.join(dataDir, 'las-week4.db')) ? 'ctf-portal.db' : 'las-week4.db';
+const db = new DatabaseSync(path.join(dataDir, dbName));
 const rows = fs.readFileSync(path.resolve(process.cwd(), csvPath), 'utf8').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 const header = rows.shift().toLowerCase().replace(/\s/g, '');
-if (header !== 'caas_id,activation_code,expires_at') {
-  console.error('CSV header must be: caas_id,activation_code,expires_at');
+const validHeaders = new Set(['caas_id,activation_code,expires_at', 'participant_id,activation_code,expires_at', 'player_id,activation_code,expires_at']);
+if (!validHeaders.has(header)) {
+  console.error('CSV header must be: participant_id,activation_code,expires_at');
   process.exit(1);
 }
 const insert = db.prepare(`INSERT INTO invites (caas_id, code_hash, expires_at) VALUES (?, ?, ?)

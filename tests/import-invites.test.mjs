@@ -26,7 +26,7 @@ test('invite importer uses a node:sqlite-compatible atomic transaction', () => {
 
   const csv = path.join(temp, 'invites.csv');
   fs.writeFileSync(csv, 'caas_id,activation_code,expires_at\nCAAS-TEST-01,abcdefghijklmnop,2026-09-02T09:00:00+07:00\n');
-  const result = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'import-invites.mjs'), csv], {
+  const result = spawnSync(process.execPath, ['--experimental-sqlite', path.join(ROOT, 'scripts', 'import-invites.mjs'), csv], {
     cwd: ROOT,
     env: { ...process.env, DATA_DIR: dataDir },
     encoding: 'utf8',
@@ -39,5 +39,7 @@ test('invite importer uses a node:sqlite-compatible atomic transaction', () => {
   verify.close();
   assert.equal(invite.caas_id, 'CAAS-TEST-01');
   assert.notEqual(invite.code_hash, 'abcdefghijklmnop');
-  fs.rmSync(temp, { recursive: true, force: true });
+  try {
+    fs.rmSync(temp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  } catch {}
 });

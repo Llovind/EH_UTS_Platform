@@ -12,26 +12,17 @@ import {
 } from '../src/wireguard.mjs';
 import { eventPhase } from '../src/game.mjs';
 
-test('configuration keeps attacker and target pools independently overridable', () => {
+test('configuration loads portal essentials and vulnMachineUrl', () => {
   const config = buildConfig({
-    APP_ORIGIN: 'https://las.example.test/',
+    APP_ORIGIN: 'https://ctf.example.test/',
     DATA_DIR: './runtime-data',
-    WG_ATTACKER_START: '10.90.0.10',
-    WG_ATTACKER_END: '10.90.0.19',
-    WG_TARGET_START: '10.90.0.100',
-    WG_TARGET_END: '10.90.0.109',
-    SKIP_NETWORK_CHECKS: 'false',
+    VULN_MACHINE_URL: 'https://drive.google.com/test-vm',
     NODE_ENV: 'production',
   }, 'C:/portal');
-  assert.equal(config.origin, 'https://las.example.test');
+  assert.equal(config.origin, 'https://ctf.example.test');
   assert.equal(config.dataDir, 'C:\\portal\\runtime-data');
-  assert.equal(config.attackerStart, '10.90.0.10');
-  assert.equal(config.targetStart, '10.90.0.100');
-  assert.equal(config.skipNetworkChecks, false);
-  assert.equal(config.wgHelperDryRun, false);
-  assert.equal(config.healthBackgroundIntervalMs, 600_000);
+  assert.equal(config.vulnMachineUrl, 'https://drive.google.com/test-vm');
   assert.equal(config.production, true);
-  assert.equal(buildConfig({ NODE_ENV: 'test' }).wgHelperDryRun, true);
 });
 
 test('peer pool parsing validates type and range', () => {

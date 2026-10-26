@@ -14,8 +14,8 @@ test('password hashes verify and do not equal plaintext', () => {
 });
 
 test('mentor secrets round-trip through authenticated encryption', () => {
-  const encoded = encryptSecret('MBC{private-flag}', KEY);
-  assert.equal(decryptSecret(encoded, KEY), 'MBC{private-flag}');
+  const encoded = encryptSecret('EH{private_flag}', KEY);
+  assert.equal(decryptSecret(encoded, KEY), 'EH{private_flag}');
   assert.throws(() => decryptSecret(encoded, crypto.randomBytes(32).toString('base64')));
 });
 
@@ -29,9 +29,9 @@ test('WireGuard and target ranges are enforced', () => {
 });
 
 test('flag format is strict and case-sensitive', () => {
-  assert.equal(validFlag('MBC{path_01}'), true);
-  assert.equal(validFlag('mbc{path_01}'), false);
-  assert.equal(validFlag('MBC{too short}'), false);
+  assert.equal(validFlag('EH{path_01}'), true);
+  assert.equal(validFlag('eh{path_01}'), false);
+  assert.equal(validFlag('EH{too short}'), false);
 });
 
 test('event gates and equal-point scoring are deterministic', () => {

@@ -44,13 +44,13 @@ function startServer(dataDir, port, overrides = {}) {
     WG_HELPER_PATH: path.join(dataDir, 'missing-helper'),
     ...overrides,
   };
-  const child = spawn(process.execPath, ['server.mjs'], { cwd: PORTAL_DIR, env, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(process.execPath, ['--experimental-sqlite', 'server.mjs'], { cwd: PORTAL_DIR, env, stdio: ['ignore', 'pipe', 'pipe'] });
   const ready = new Promise((resolve, reject) => {
     let output = '';
     const timer = setTimeout(() => reject(new Error('server did not start: ' + output)), 8000);
     const onData = (chunk) => {
       output += chunk.toString();
-      if (output.includes('MBC LAS Week 4 portal listening')) {
+      if (output.toLowerCase().includes('listening on')) {
         clearTimeout(timer);
         resolve();
       }
@@ -59,7 +59,7 @@ function startServer(dataDir, port, overrides = {}) {
     child.stderr.on('data', onData);
     child.once('error', (error) => { clearTimeout(timer); reject(error); });
     child.once('exit', (code) => {
-      if (code !== null && !output.includes('MBC LAS Week 4 portal listening')) {
+      if (code !== null && !output.toLowerCase().includes('listening on')) {
         clearTimeout(timer);
         reject(new Error('server exited before start: ' + output));
       }
@@ -83,7 +83,7 @@ function setCookies(response) {
 }
 
 function sessionCookie(response) {
-  const cookies = setCookies(response).filter((value) => value.startsWith('mbc_las_sid=') && value !== 'mbc_las_sid=');
+  const cookies = setCookies(response).filter((value) => value.startsWith('ctf_sid=') && value !== 'ctf_sid=');
   return cookies.at(-1) || '';
 }
 
@@ -151,7 +151,7 @@ test('runnable setup surface exposes health, public installer, and enrollment se
   assert.deepEqual((await publicVerify.json()).code, 'WIREGUARD_ONLY');
 
   const registerPage = await fetch(base + '/register');
-  const registerCookie = setCookies(registerPage).find((value) => value.startsWith('mbc_las_sid=')) || '';
+  const registerCookie = setCookies(registerPage).find((value) => value.startsWith('ctf_sid=')) || '';
   const registerCsrf = csrfFrom(await registerPage.text());
   const inviteCode = 'invite-code-001';
   const db = new DatabaseSync(path.join(dataDir, 'las-week4.db'));
@@ -166,7 +166,7 @@ test('runnable setup surface exposes health, public installer, and enrollment se
   });
   assert.equal(registration.status, 302);
   const cookie = sessionCookie(registration);
-  assert.ok(cookie.startsWith('mbc_las_sid='));
+  assert.ok(cookie.startsWith('ctf_sid='));
 
   const workspace = await fetch(base + '/workspace', { headers: { cookie } });
   const workspaceText = await workspace.text();
@@ -275,16 +275,15 @@ test('runnable setup surface exposes health, public installer, and enrollment se
   const learnPage = await fetch(base + '/learn', { headers: { cookie } });
   const learnText = await learnPage.text();
   assert.equal(learnPage.status, 200);
-  assert.match(learnText, /A public Ubuntu 24\.04 VPS is required/);
-  assert.match(learnText, /Oracle Cloud Always Free/);
-  assert.match(learnText, /Google Cloud Free Program/);
+  assert.match(learnText, /From Recon to Root/);
+  assert.match(learnText, /CURRICULUM/);
   assert.doesNotMatch(learnText, /PORTAL TIMELINE|WED 02 SEP|FRI 04 SEP/);
   assert.doesNotMatch(learnText, /credential recovery|reset notes/i);
   const builderEntries = [
     ['_csrf', builderCsrf], ['title', 'Quiet Backup'],
     ['description', 'A controlled Linux privilege escalation lab for evidence practice.'],
     ['mentor_notes', 'Enumerate the SUID binary, validate its input boundary, and use it to read the flag.'],
-    ['flag', 'MBC{test_flag}'],
+    ['flag', 'EH{test_flag}'],
     ['service_port', '22'], ['service_protocol', 'tcp'], ['service_label', 'SSH'], ['service_note', 'Remote shell'],
     ['service_port', '80'], ['service_protocol', 'tcp'], ['service_label', 'HTTP'], ['service_note', 'Web clue'],
     ['service_port', '8080'], ['service_protocol', 'tcp'], ['service_label', 'App'], ['service_note', 'Challenge service'],
@@ -337,7 +336,7 @@ test('admin review is protected by WireGuard source and redacts flag material fr
 
   const base = 'http://127.0.0.1:' + port;
   const loginPage = await fetch(base + '/login');
-  const loginCookie = setCookies(loginPage).find((value) => value.startsWith('mbc_las_sid=')) || '';
+  const loginCookie = setCookies(loginPage).find((value) => value.startsWith('ctf_sid=')) || '';
   const loginCsrf = csrfFrom(await loginPage.text());
   const failedLogin = await fetch(base + '/login', {
     method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: loginCookie },
@@ -345,7 +344,7 @@ test('admin review is protected by WireGuard source and redacts flag material fr
   });
   const failedLoginText = await failedLogin.text();
   assert.equal(failedLogin.status, 401);
-  assert.match(failedLoginText, /<title>Sign in · MBC LAS W4<\/title>/);
+  assert.match(failedLoginText, /<title>Sign in · CTF Portal<\/title>/);
   assert.match(failedLoginText, /The credentials are invalid\./);
   assert.doesNotMatch(failedLoginText, /wrong-password/);
   const login = await fetch(base + '/login', {
@@ -492,7 +491,7 @@ test('lab space exposes clear active, healthy, owned, and solved visual states',
 
   const base = 'http://127.0.0.1:' + port;
   const loginPage = await fetch(base + '/login');
-  const loginCookie = setCookies(loginPage).find((value) => value.startsWith('mbc_las_sid=')) || '';
+  const loginCookie = setCookies(loginPage).find((value) => value.startsWith('ctf_sid=')) || '';
   const loginCsrf = csrfFrom(await loginPage.text());
   const login = await fetch(base + '/login', {
     method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: loginCookie },
@@ -538,7 +537,7 @@ test('visitor accounts are read-only, hidden from scoreboard, and cannot access 
 
   const base = 'http://127.0.0.1:' + port;
   const loginPage = await fetch(base + '/login');
-  const loginCookie = setCookies(loginPage).find((value) => value.startsWith('mbc_las_sid=')) || '';
+  const loginCookie = setCookies(loginPage).find((value) => value.startsWith('ctf_sid=')) || '';
   const loginCsrf = csrfFrom(await loginPage.text());
   const login = await fetch(base + '/login', {
     method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: loginCookie },

